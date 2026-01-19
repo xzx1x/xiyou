@@ -5,6 +5,8 @@ export class AppError extends Error {
     public readonly details?: Record<string, unknown>,
   ) {
     super(message);
+    // 保持错误类型名称可读，便于调试信息展示。
+    this.name = this.constructor.name;
   }
 }
 
