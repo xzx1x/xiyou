@@ -1,0 +1,161 @@
+/*
+* @Author: hasee
+* @Date:   2016-08-05 11:02:02
+* @Last Modified by:   hasee
+* @Last Modified time: 2016-08-18 16:45:33
+*/
+
+.mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 999;
+  background: #000;
+  opacity: .6;
+}
+
+.activePhone {
+  position: fixed;
+  z-index: 1000;
+  top: 50%;
+  left: 50%;
+  width: 340px;
+  height: 450px;
+  margin: -225px 0 0 -170px;
+  background: #fff url('/images/website-www/v4/login/bindphone_bg.png') no-repeat bottom center;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(49, 105, 176, .2);
+  overflow: hidden;
+}
+
+.activePhone .head {
+  height: 50px;
+  line-height: 50px;
+  text-align: center;
+  background: #F5F7FA;
+}
+
+.activePhone .head span {
+  color: #3169B0;
+  font-size: 22px;
+}
+
+.activePhone .head .close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: block;
+  width: 15px;
+  height: 15px;
+  padding: 17.5px 15px;
+}
+
+.activePhone .head .close i {
+  display: block;
+  width: 15px;
+  height: 15px;
+  background: url('/images/website-www/v4/login/icon-bingphone_close.png') no-repeat 0 0;
+}
+
+.activePhone .head .close:hover {
+  background: #eeeff3;
+}
+
+.activePhone .head .close:hover i {
+  background-position: -15px 0;
+}
+
+.activePhone .body {
+  padding: 0 45px;
+}
+
+.activePhone .body .desc {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  font-size: 14px;
+  line-height: 18px;
+  color: #2B343A;
+}
+.activePhone .body .input-group:after {
+  content: '';
+  display: block;
+  width:0;
+  height:0;
+  clear:both;
+}
+
+.activePhone .body .input-group input {
+  display: inline-block;
+  border: 1px solid #BBC7CE;
+  height: 23px;
+  line-height: 23px;
+  padding: 7.5px;
+  border-radius: 3px;
+  outline-color: #3AA8E8;
+}
+
+.activePhone .body .input-group input.input_full {
+  width: 233px;
+}
+
+.activePhone .body .input-group input.input_sm {
+  width: 123px;
+}
+
+.activePhone .body .input-group .inputBtn_sm {
+	float:right;
+  display: inline-block;
+  width: 98px;
+  height: 38px;
+  line-height: 38px;
+  border: #76BCF5 solid 1px;
+  background: #f2f5f7;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #3984E6;
+  text-align: center;
+  text-decoration: none;
+}
+.activePhone .body .input-group .inputBtn_sm.disabled {
+  background: #F2F5F7;
+  border-color: #F2F5F7;
+  color: #A8B4BB;
+}
+.activePhone .body .submit-group {
+  margin-top: 30px;
+}
+
+.activePhone .body .submit-group .btn_blue {
+  display: block;
+  width: 100%;
+  height: 40px;
+  line-height: 40px;
+  background: #3169B0;
+  font-size: 16px;
+  color: #fff;
+  border-radius: 3px;
+  text-decoration: none;
+  text-align: center;
+  transition: box-shadow .5s;
+  box-shadow: 0 0 6px #ccc;
+}
+
+.activePhone .body .submit-group .btn_blue:hover {
+  box-shadow: 0 0 10px #3169B0;
+}
+
+
+.activePhone .body .notice{
+	font-size: 14px;
+	color: #139DE8;
+}
+
+.activePhone .body .tip{
+  margin: 0;
+  color: #F1625D;
+  font-size: 12px;
+  line-height: 20px;
+  height: 20px;
+}

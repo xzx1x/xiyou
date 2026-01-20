@@ -1,6 +1,7 @@
-"use client";
+'use client';
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   loginUser,
   registerUser,
@@ -40,6 +41,8 @@ export function AuthForm({ mode }: Props) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const router = useRouter();
+
   /**
    * 提交事件：根据 mode 调用登录或注册 API，并展示结果消息。
    */
@@ -64,7 +67,11 @@ export function AuthForm({ mode }: Props) {
           password: formData.password,
         };
         const response = await loginUser(payload);
+        localStorage.setItem("campus_auth_token", response.token);
         setSuccessMessage(`登录成功，Token: ${response.token}`);
+        setTimeout(() => {
+          router.push("/");
+        }, 200);
       }
     } catch (error) {
       setErrorMessage(
