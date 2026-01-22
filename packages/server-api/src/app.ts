@@ -2,6 +2,7 @@ import Koa from "koa";
 import bodyParser from "koa-bodyparser";
 import router from "./routes";
 import { errorHandler } from "./middlewares/errorHandler";
+import { requestLogger } from "./middlewares/requestLogger";
 
 /**
  * 创建并配置 Koa 应用实例，统一装配中间件与路由。
@@ -11,6 +12,7 @@ export function createApp() {
   const app = new Koa();
 
   app.use(errorHandler);
+  app.use(requestLogger);
   // CORS 允许来源，默认用于本地前端开发。
   const allowOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";
   // 允许的 HTTP 方法，用于处理浏览器预检请求。
@@ -35,7 +37,10 @@ export function createApp() {
   });
   app.use(
     bodyParser({
+      // 仅允许 JSON 解析，避免误处理 multipart；头像上传走 Base64 JSON。
       enableTypes: ["json"],
+      // 放宽 JSON 体积上限，兼容头像 Base64 上传。
+      jsonLimit: "3mb",
     }),
   );
 

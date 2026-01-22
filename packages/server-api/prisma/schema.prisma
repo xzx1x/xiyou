@@ -13,12 +13,404 @@ enum UserRole {
   ADMIN
 }
 
+enum CounselorApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ServiceMode {
+  ONLINE
+  OFFLINE
+  BOTH
+}
+
+enum ScheduleStatus {
+  AVAILABLE
+  BOOKED
+  CANCELLED
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CANCELLED_BY_USER
+  CANCELLED_BY_COUNSELOR
+  COMPLETED
+}
+
+enum AssessmentType {
+  PHQ9
+  GAD7
+}
+
+enum ContentType {
+  ARTICLE
+  VIDEO
+  NOTICE
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ForumPostStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+}
+
+enum EvidenceStatus {
+  PENDING
+  RECORDED
+}
+
+enum EvidenceTargetType {
+  APPOINTMENT
+  CONSULTATION
+  ASSESSMENT
+  FEEDBACK
+  FORUM_POST
+  REPORT
+  CONTENT
+  COUNSELOR_APPLICATION
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ChatThreadType {
+  DIRECT
+}
+
 model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String
+  identityCode   String   @unique @map("identity_code")
+  nickname       String?
+  gender         String?
+  major          String?
+  grade          String?
+  avatarUrl      String?  @map("avatar_url")
+  isDisabled     Boolean  @default(false) @map("is_disabled")
+  disabledReason String?  @map("disabled_reason")
+  lastLoginAt    DateTime? @map("last_login_at")
+  role           UserRole @default(USER)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model IdentityWhitelist {
+  identityCode String   @id @map("identity_code")
+  defaultRole  UserRole @default(USER) @map("default_role")
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("identity_whitelist")
+}
+
+model CounselorApplication {
+  id             String                     @id @default(cuid())
+  userId         String                     @map("user_id")
+  status         CounselorApplicationStatus @default(PENDING)
+  qualifications String?
+  motivation     String?
+  attachmentUrls String?                    @map("attachment_urls")
+  reviewReason   String?                    @map("review_reason")
+  reviewedBy     String?                    @map("reviewed_by")
+  reviewedAt     DateTime?                  @map("reviewed_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+
+  @@map("counselor_applications")
+}
+
+model CounselorProfile {
+  userId        String      @id @map("user_id")
+  bio           String?
+  specialties   String?
+  serviceMode   ServiceMode @default(BOTH) @map("service_mode")
+  officeLocation String?    @map("office_location")
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@map("counselor_profiles")
+}
+
+model CounselorSchedule {
+  id          String         @id @default(cuid())
+  counselorId String         @map("counselor_id")
+  startTime   DateTime       @map("start_time")
+  endTime     DateTime       @map("end_time")
+  mode        ServiceMode    @default(ONLINE)
+  location    String?
+  status      ScheduleStatus @default(AVAILABLE)
+  cancelReason String?       @map("cancel_reason")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@map("counselor_schedules")
+}
+
+model Appointment {
+  id            String           @id @default(cuid())
+  userId        String           @map("user_id")
+  counselorId   String           @map("counselor_id")
+  scheduleId    String           @map("schedule_id")
+  status        AppointmentStatus @default(BOOKED)
+  userNote      String?          @map("user_note")
+  counselorNote String?          @map("counselor_note")
+  cancelReason  String?          @map("cancel_reason")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  cancelledAt   DateTime?        @map("cancelled_at")
+  completedAt   DateTime?        @map("completed_at")
+
+  @@map("appointments")
+}
+
+model ConsultationRecord {
+  id               String   @id @default(cuid())
+  appointmentId    String   @unique @map("appointment_id")
+  userId           String   @map("user_id")
+  counselorId      String   @map("counselor_id")
+  summary          String?
+  counselorFeedback String? @map("counselor_feedback")
+  homework         String?
+  followUpPlan     String?  @map("follow_up_plan")
+  assessmentSummary String? @map("assessment_summary")
+  issueCategory    String?  @map("issue_category")
+  isCrisis         Boolean  @default(false) @map("is_crisis")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("consultation_records")
+}
+
+model AssessmentResult {
+  id        String         @id @default(cuid())
+  userId    String         @map("user_id")
+  type      AssessmentType
+  score     Int
+  level     String
+  answers   String
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@map("assessment_results")
+}
+
+model AppointmentFeedback {
+  id           String   @id @default(cuid())
+  appointmentId String  @map("appointment_id")
+  userId       String   @map("user_id")
+  counselorId  String   @map("counselor_id")
+  rating       Int
+  comment      String?
+  liked        Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("appointment_feedback")
+}
+
+model ChatThread {
+  id            String          @id @default(cuid())
+  type          ChatThreadType  @default(DIRECT)
+  createdAt     DateTime        @default(now()) @map("created_at")
+  lastMessageAt DateTime?       @map("last_message_at")
+
+  @@map("chat_threads")
+}
+
+model ChatParticipant {
+  threadId String   @map("thread_id")
+  userId   String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([threadId, userId])
+  @@map("chat_participants")
+}
+
+model ChatMessage {
   id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  nickname  String?
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  threadId  String   @map("thread_id")
+  senderId  String   @map("sender_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  readAt    DateTime? @map("read_at")
+
+  @@map("chat_messages")
+}
+
+model FriendRequest {
+  id          String              @id @default(cuid())
+  requesterId String              @map("requester_id")
+  targetId    String              @map("target_id")
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  @@map("friend_requests")
+}
+
+model Friend {
+  userId   String   @map("user_id")
+  friendId String   @map("friend_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([userId, friendId])
+  @@map("friends")
+}
+
+model ForumPost {
+  id          String         @id @default(cuid())
+  authorId    String?        @map("author_id")
+  title       String
+  content     String
+  status      ForumPostStatus @default(PENDING)
+  isAnonymous Boolean        @default(false) @map("is_anonymous")
+  reviewReason String?       @map("review_reason")
+  reviewedBy  String?        @map("reviewed_by")
+  reviewedAt  DateTime?      @map("reviewed_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  authorId  String?  @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("forum_comments")
+}
+
+model ForumLike {
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([postId, userId])
+  @@map("forum_likes")
+}
+
+model Report {
+  id         String      @id @default(cuid())
+  reporterId String      @map("reporter_id")
+  targetType String      @map("target_type")
+  targetId   String      @map("target_id")
+  reason     String
+  status     ReportStatus @default(PENDING)
+  actionTaken String?    @map("action_taken")
+  resolvedBy String?     @map("resolved_by")
+  resolvedAt DateTime?   @map("resolved_at")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@map("reports")
+}
+
+model EvidenceRecord {
+  id        String             @id @default(cuid())
+  targetType EvidenceTargetType @map("target_type")
+  targetId  String             @map("target_id")
+  summary   String?
+  status    EvidenceStatus     @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  @@map("evidence_records")
+}
+
+model ContentItem {
+  id          String       @id @default(cuid())
+  type        ContentType
+  title       String
+  summary     String?
+  content     String?
+  coverUrl    String?      @map("cover_url")
+  status      ContentStatus @default(DRAFT)
+  createdBy   String       @map("created_by")
+  updatedBy   String?      @map("updated_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  publishedAt DateTime?    @map("published_at")
+
+  @@map("content_items")
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String              @map("user_id")
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  message   String
+  link      String?
+  readAt    DateTime?           @map("read_at")
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model EmailOutbox {
+  id          String      @id @default(cuid())
+  userId      String?     @map("user_id")
+  email       String
+  subject     String
+  body        String
+  status      EmailStatus @default(PENDING)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  sentAt      DateTime?   @map("sent_at")
+  errorMessage String?    @map("error_message")
+
+  @@map("email_outbox")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_resets")
+}
+
+model RequestLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  method     String
+  path       String
+  status     Int
+  durationMs Int      @map("duration_ms")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("request_logs")
 }

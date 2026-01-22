@@ -1,5 +1,6 @@
 import mysql from "mysql2/promise";
 import { env } from "./env";
+import { ensureDatabaseSchema } from "./schema";
 
 /**
  * 默认字符集/排序，保证所有表都能覆盖表情与多语言字符。
@@ -80,29 +81,7 @@ export async function ensureDatabase(): Promise<void> {
     `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE ${COLLATION}`,
   );
   await connection.query(`USE \`${dbConfig.database}\``);
-  // 用户基本信息
-  await connection.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id VARCHAR(36) NOT NULL PRIMARY KEY,
-      email VARCHAR(255) NOT NULL UNIQUE,
-      password VARCHAR(100) NOT NULL,
-      identity_code VARCHAR(64) NOT NULL UNIQUE,
-      nickname VARCHAR(100) NULL,
-      role ENUM('USER', 'COUNSELOR', 'ADMIN') NOT NULL DEFAULT 'USER',
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${COLLATION}
-  `);
-  // 身份白名单，用于约束允许注册的学号/工号
-  await connection.query(`
-    CREATE TABLE IF NOT EXISTS identity_whitelist (
-      identity_code VARCHAR(64) NOT NULL PRIMARY KEY,
-      default_role ENUM('USER', 'COUNSELOR', 'ADMIN') NOT NULL DEFAULT 'USER',
-      description VARCHAR(255) NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${COLLATION}
-  `);
+  await ensureDatabaseSchema(connection, dbConfig.database, COLLATION);
   await seedIdentityWhitelist(connection);
 
   await connection.end();

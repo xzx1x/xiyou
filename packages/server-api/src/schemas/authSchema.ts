@@ -27,3 +27,26 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+/**
+ * 密码重置申请：仅需邮箱即可触发重置流程。
+ */
+export const passwordResetRequestSchema = z.object({
+  email: qqEmail,
+});
+
+export type PasswordResetRequestInput = z.infer<
+  typeof passwordResetRequestSchema
+>;
+
+/**
+ * 密码重置确认：需提交验证码/令牌与新密码。
+ */
+export const passwordResetConfirmSchema = z.object({
+  token: z.string().min(6, "重置验证码不能为空"),
+  newPassword: z.string().min(8, "新密码至少 8 位"),
+});
+
+export type PasswordResetConfirmInput = z.infer<
+  typeof passwordResetConfirmSchema
+>;

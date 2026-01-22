@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { AppShell } from "../components/layouts/AppShell";
 
+// 用户端快捷功能入口配置。
 const quickActions = [
   {
     title: "预约管理",
@@ -48,7 +49,7 @@ const quickActions = [
   },
   {
     title: "聊天功能",
-    description: "与心理师或好友私聊/群聊，实时支持语音/文字。",
+    description: "与心理师或好友私聊，接收即时提醒。",
     badge: "聊天",
     icon: "💬",
     accent: "#a5b4fc",
@@ -62,6 +63,7 @@ const quickActions = [
   },
 ];
 
+// 心理师端功能亮点配置。
 const counselorTools = [
   {
     title: "日程与档期管理",
@@ -81,6 +83,7 @@ const counselorTools = [
   },
 ];
 
+// 首页消息预览数据。
 const notifications = [
   {
     title: "预约确认：心理师李老师已通过",
@@ -99,6 +102,7 @@ const notifications = [
   },
 ];
 
+// 测评结果亮点展示。
 const evaluationHighlights = [
   {
     label: "PHQ-9",
@@ -117,210 +121,139 @@ const evaluationHighlights = [
   },
 ];
 
+/**
+ * 首页：展示功能概览与系统亮点。
+ */
 export default function HomePage() {
-  const [userRole, setUserRole] = useState<"USER" | "COUNSELOR">("USER");
-  const [loggedIn, setLoggedIn] = useState(true);
-  const heroStatus = useMemo(
-    () => ({
-      badge: loggedIn ? "已登录" : "未登录",
-      action: loggedIn ? "登出" : "模拟登录",
-    }),
-    [loggedIn],
-  );
-
   return (
-    <div className="dashboard-shell">
-      <header className="dashboard-header">
-        <div className="dashboard-brand">
-          <span className="logo-icon">Ψ</span>
-          <div>
-            <strong>校心连线</strong>
-            <p>区块链存证 | 心理咨询 | 隐私保护</p>
-          </div>
-        </div>
-        <nav className="dashboard-nav">
-          <Link href="/" className="nav-link">
-            首页
-          </Link>
-          <Link href="/articles" className="nav-link">
-            阅读
-          </Link>
-          <Link href="/qa" className="nav-link">
-            问答
-          </Link>
-          <Link href="/courses" className="nav-link">
-            学堂
-          </Link>
-          <Link href="/counselors" className="nav-link">
-            心理咨询
-          </Link>
-          <Link href="/forum" className="nav-link">
-            倾诉社区
-          </Link>
-        </nav>
-        <div className="header-actions">
-          <div className="search-pill">
-            <input
-              type="text"
-              placeholder="输入关键词搜索预约/内容"
-              aria-label="搜索"
-            />
-            <span>搜索</span>
-          </div>
-          <Link href="/login" className="ghost-btn small">
-            重新登录
-          </Link>
-        </div>
-      </header>
-
-      <main className="dashboard-main">
-        <section className="hero-card">
-          <div>
-            <p className="eyebrow">
-              <span>{heroStatus.badge}</span> · {userRole === "USER" ? "普通用户" : "心理师"}
-            </p>
-            <h1>
-              校园心理咨询 · <span className="gradient-text">安全信任</span> 与“记录即存证”
-            </h1>
-            <p>
-              使用链上存证与本地隐私强化策略，预约/测评/咨询记录在后台统一归档，心理师身份需由管理员审核。
-            </p>
-            <div className="hero-actions">
-              <button
-                className="btn btn-primary"
-                onClick={() => setLoggedIn((prev) => !prev)}
-              >
-                {heroStatus.action}
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() =>
-                  setUserRole((prev) => (prev === "USER" ? "COUNSELOR" : "USER"))
-                }
-              >
-                {userRole === "USER" ? "申请心理师身份" : "切换回用户视角"}
-              </button>
-            </div>
-          </div>
-          <div className="status-panel">
-            <div>
-              <small>本周预约</small>
-              <strong>3 / 5 次</strong>
-            </div>
-            <div>
-              <small>最新消息</small>
-              <strong>收到 8 条面谈反馈</strong>
-            </div>
-            <div>
-              <small>链上存证</small>
-              <strong>42 条记录已上链</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="panel quick-actions">
-          <div className="panel-heading">
-            <div>
-              <h2>一键跳转 · 功能概览</h2>
-              <p>参考壹心理排版，快速进入预约、测评、心理社区等关键模块</p>
-            </div>
-            <Link href="/register" className="ghost-btn small">
-              完善资料
+    <AppShell title="首页概览" description="快速了解系统功能与使用入口。" withPanel={false}>
+      <section className="hero-card">
+        <div>
+          <p className="eyebrow">
+            <span>已登录</span> · 普通用户
+          </p>
+          <h1>
+            校园心理咨询 · <span className="gradient-text">安全信任</span> 与“记录即存证”
+          </h1>
+          <p>
+            预约/测评/咨询记录在后台统一归档，心理师身份需由管理员审核；链上存证接口已预留。
+          </p>
+          <div className="hero-actions">
+            <Link href="/counselors" className="btn btn-primary">
+              开始预约
+            </Link>
+            <Link href="/assessments" className="btn btn-secondary">
+              立即测评
             </Link>
           </div>
-          <div className="action-grid">
-            {quickActions.map((action) => (
-              <article key={action.title} className="action-card">
-                <div className="action-badge" style={{ background: action.accent }}>
-                  {action.icon}
-                </div>
-                <div>
-                  <p className="action-label">{action.badge}</p>
-                  <h3>{action.title}</h3>
-                  <p>{action.description}</p>
-                </div>
-              </article>
-            ))}
+        </div>
+        <div className="status-panel">
+          <div>
+            <small>本周预约</small>
+            <strong>3 / 5 次</strong>
           </div>
-        </section>
+          <div>
+            <small>最新消息</small>
+            <strong>收到 8 条面谈反馈</strong>
+          </div>
+          <div>
+            <small>链上存证</small>
+            <strong>42 条记录已占位</strong>
+          </div>
+        </div>
+      </section>
 
-        <section className="panel evaluation-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>近期测评·反馈</h2>
-              <p>你的心理状态与满意度统计一目了然</p>
-            </div>
-            <button className="ghost-btn small">查看全部报告</button>
+      <section className="panel quick-actions">
+        <div className="panel-heading">
+          <div>
+            <h2>一键跳转 · 功能概览</h2>
+            <p>快速进入预约、测评、心理社区等关键模块</p>
           </div>
-          <div className="evaluation-grid">
-            {evaluationHighlights.map((item) => (
-              <article key={item.label} className="evaluation-card">
-                <p className="eyebrow">{item.label}</p>
-                <strong>{item.value}</strong>
-                <p>{item.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel notifications-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>通知与动态</h2>
-              <p>重要咨询、论坛热帖、举报反馈</p>
-            </div>
-            <button className="ghost-btn small">通知设置</button>
-          </div>
-          <div className="notifications-list">
-            {notifications.map((note) => (
-              <article key={note.title}>
-                <div>
-                  <h3>{note.title}</h3>
-                  <p>{note.message}</p>
-                </div>
-                <span>{note.time}</span>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {userRole === "COUNSELOR" && (
-          <section className="panel counselor-panel">
-            <div className="panel-heading">
-              <div>
-                <h2>心理师工具箱</h2>
-                <p>心理师身份成功审批后自动开放以下功能</p>
+          <Link href="/profile" className="ghost-btn small">
+            完善资料
+          </Link>
+        </div>
+        <div className="action-grid">
+          {quickActions.map((action) => (
+            <article key={action.title} className="action-card">
+              <div className="action-badge" style={{ background: action.accent }}>
+                {action.icon}
               </div>
-              <Link href="/counselor/appointments" className="ghost-btn small">
-                查看审批列表
-              </Link>
-            </div>
-            <div className="counselor-grid">
-              {counselorTools.map((item) => (
-                <article key={item.title}>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-      </main>
+              <div>
+                <p className="action-label">{action.badge}</p>
+                <h3>{action.title}</h3>
+                <p>{action.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
-      <footer className="dashboard-footer">
-        <div>
-          <strong>校心连线</strong>
-          <p>使命：用区块链把咨询记录安全锁住，用 AI 为心理师赋能。</p>
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>心理师端 · 服务能力</h2>
+            <p>面向心理咨询师的日程、记录与统计能力</p>
+          </div>
+          <Link href="/counselor/schedules" className="ghost-btn small">
+            进入心理师端
+          </Link>
         </div>
-        <div>
-          <p>联系与支持</p>
-          <small>心理健康中心 · 校内服务 · 24h 咨询</small>
+        <div className="action-grid">
+          {counselorTools.map((tool) => (
+            <article key={tool.title} className="action-card">
+              <div>
+                <h3>{tool.title}</h3>
+                <p>{tool.description}</p>
+              </div>
+            </article>
+          ))}
         </div>
-        <div>
-          <p>版本</p>
-          <small>v0.2 · 包含登录/注册、白名单、测评、论坛、存证</small>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>最新消息预览</h2>
+            <p>消息中心将统一展示预约结果、提醒与公告</p>
+          </div>
+          <Link href="/notifications" className="ghost-btn small">
+            查看全部
+          </Link>
         </div>
-      </footer>
-    </div>
+        <div className="timeline">
+          {notifications.map((item) => (
+            <div key={item.title} className="timeline-item">
+              <span>{item.time}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>测评与满意度亮点</h2>
+            <p>心理测评即时生成评分与建议</p>
+          </div>
+          <Link href="/assessments" className="ghost-btn small">
+            查看测评
+          </Link>
+        </div>
+        <div className="action-grid">
+          {evaluationHighlights.map((item) => (
+            <article key={item.label} className="action-card">
+              <h3>{item.label}</h3>
+              <strong>{item.value}</strong>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </AppShell>
   );
 }
