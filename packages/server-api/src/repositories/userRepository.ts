@@ -59,6 +59,26 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 }
 
 /**
+ * 按昵称查找用户，用于注册/资料更新时避免重复昵称。
+ */
+export async function findUserByNickname(
+  nickname: string,
+): Promise<UserRecord | null> {
+  const trimmed = nickname.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT * FROM users WHERE nickname = ? LIMIT 1",
+    [trimmed],
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  return mapRow(rows[0]!);
+}
+
+/**
  * 直接以主键读取完整用户信息，常用于写入后回查。
  */
 export async function findUserById(id: string): Promise<UserRecord | null> {

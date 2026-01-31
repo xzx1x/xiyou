@@ -107,7 +107,7 @@ model User {
   email          String   @unique
   password       String
   identityCode   String   @unique @map("identity_code")
-  nickname       String?
+  nickname       String?  @unique
   gender         String?
   major          String?
   grade          String?

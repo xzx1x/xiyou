@@ -6,6 +6,7 @@ import {
   createUser,
   findUserByEmail,
   findUserByIdentityCode,
+  findUserByNickname,
   type UserRecord,
   type UserRole,
   updateUserLastLogin,
@@ -63,12 +64,20 @@ export async function registerUser(input: RegisterInput) {
   if (identityOwner) {
     throw new ConflictError("账号已存在，该学号/工号与邮箱已绑定");
   }
+  const normalizedNickname = input.nickname?.trim();
+  const safeNickname = normalizedNickname ? normalizedNickname : undefined;
+  if (safeNickname) {
+    const nicknameOwner = await findUserByNickname(safeNickname);
+    if (nicknameOwner) {
+      throw new ConflictError("昵称已被占用");
+    }
+  }
   const normalizedForStore = normalizedIdentity.toUpperCase();
   const hashed = await bcrypt.hash(input.password, SALT_ROUNDS);
   const user = await createUser({
     email: input.email,
     password: hashed,
-    nickname: input.nickname,
+    nickname: safeNickname,
     identityCode: normalizedForStore,
     role: allowedIdentity.defaultRole,
   });
@@ -102,7 +111,7 @@ export async function loginUser(input: LoginInput) {
   const token = jwt.sign(
     { sub: user.id, role: user.role },
     env.jwtSecret,
-    { expiresIn: "2h" },
+    { expiresIn: "1d" },
   );
   return {
     token,

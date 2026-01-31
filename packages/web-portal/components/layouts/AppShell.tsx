@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode, useEffect } from "react";
-import { getProfile, type User, type UserRole } from "../../lib/api";
+import { getProfile, resolveAvatarUrl, type User, type UserRole } from "../../lib/api";
 
 // 侧边导航项结构，统一渲染菜单。
 type NavItem = {
@@ -108,6 +108,12 @@ export function AppShell({
     return [...COMMON_NAV, ...USER_NAV];
   }, [user]);
 
+  const avatarUrl = useMemo(
+    () => resolveAvatarUrl(user?.avatarUrl) || "/default-avatar.svg",
+    [user?.avatarUrl],
+  );
+  const avatarAlt = user?.nickname ?? user?.email ?? "用户";
+
   // 判断是否满足页面所需角色。
   const roleDenied =
     !!requiredRoles && !!user && !requiredRoles.includes(user.role);
@@ -155,7 +161,17 @@ export function AppShell({
     <div className="dashboard-shell">
       <header className="dashboard-header">
         <div className="dashboard-brand">
-          <span className="logo-icon">Ψ</span>
+          <img
+            className="logo-avatar"
+            src={avatarUrl}
+            alt={`${avatarAlt}头像`}
+            onError={(event) => {
+              const target = event.currentTarget;
+              if (!target.src.endsWith("/default-avatar.svg")) {
+                target.src = "/default-avatar.svg";
+              }
+            }}
+          />
           <div>
             <strong>校心连线</strong>
             <p>心理咨询 · 站内存证 · 角色协作</p>

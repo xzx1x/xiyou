@@ -26,7 +26,7 @@ export default function LoginPage() {
         <h1>登录系统</h1>
         <p>
           使用 QQ 邮箱和密码完成登录，系统会依据绑定的学号/工号切换普通用户或管理员界面，
-          成功后会返回访问 Token。
+          成功后会进入系统首页。
         </p>
         <div className="role-tabs">
           {ROLE_OPTIONS.map((role) => (
@@ -44,7 +44,7 @@ export default function LoginPage() {
           {activeRole?.description ?? "请选择角色查看权益说明"}
         </p>
         <AuthForm mode="login" />
-        <p className="hint">
+        <p className="hint spaced">
           还没有账号？<Link href="/register">前往注册</Link>
         </p>
         <p className="hint">

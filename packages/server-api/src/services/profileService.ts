@@ -2,13 +2,14 @@ import bcrypt from "bcryptjs";
 import { mkdir, writeFile } from "fs/promises";
 import { join, resolve } from "path";
 import {
+  findUserByNickname,
   findUserById,
   type UpdateUserProfileInput,
   type UserRecord,
   updateUserPassword,
   updateUserProfile,
 } from "../repositories/userRepository";
-import { BadRequestError, UnauthorizedError } from "../utils/errors";
+import { BadRequestError, ConflictError, UnauthorizedError } from "../utils/errors";
 
 // 资料更新载荷，允许字段为空或缺省。
 export type ProfilePayload = {
@@ -109,9 +110,23 @@ export async function updateProfile(
   userId: string,
   payload: ProfilePayload,
 ) {
+  const normalizedNickname =
+    payload.nickname === undefined
+      ? undefined
+      : payload.nickname === null
+        ? null
+        : payload.nickname.trim();
+
+  if (normalizedNickname) {
+    const existing = await findUserByNickname(normalizedNickname);
+    if (existing && existing.id !== userId) {
+      throw new ConflictError("昵称已被占用");
+    }
+  }
+
   // 转换为仓储层允许的结构，避免直接透传不必要字段。
   const normalized: UpdateUserProfileInput = {
-    nickname: payload.nickname,
+    nickname: normalizedNickname === "" ? null : normalizedNickname,
     gender: payload.gender,
     major: payload.major,
     grade: payload.grade,

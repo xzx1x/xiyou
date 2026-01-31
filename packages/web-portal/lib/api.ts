@@ -3,6 +3,19 @@ export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001"
 ).replace(/\/$/, "");
 
+/**
+ * 将头像路径转换为可访问的完整 URL。
+ */
+export function resolveAvatarUrl(avatarUrl?: string | null) {
+  if (!avatarUrl) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(avatarUrl)) {
+    return avatarUrl;
+  }
+  return `${API_BASE_URL}${avatarUrl.startsWith("/") ? "" : "/"}${avatarUrl}`;
+}
+
 export type UserRole = "USER" | "COUNSELOR" | "ADMIN";
 
 export interface User {

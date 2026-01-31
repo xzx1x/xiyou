@@ -14,6 +14,8 @@ const USER_COLUMNS: Array<{ name: string; definition: string }> = [
 
 // information_schema 查询的返回结构。
 type ColumnNameRow = RowDataPacket & { columnName: string };
+type IndexNameRow = RowDataPacket & { indexName: string; nonUnique: number };
+type DuplicateNicknameRow = RowDataPacket & { nickname: string; count: number };
 
 /**
  * 初始化数据库结构：创建核心表并补齐缺失字段。
@@ -25,6 +27,7 @@ export async function ensureDatabaseSchema(
 ): Promise<void> {
   await createUsersTable(connection, collation);
   await ensureUserColumns(connection, databaseName);
+  await ensureUserIndexes(connection, databaseName);
   await createIdentityWhitelistTable(connection, collation);
   await createCounselorTables(connection, collation);
   await createAppointmentTables(connection, collation);
@@ -64,7 +67,8 @@ async function createUsersTable(
       last_login_at DATETIME NULL,
       role ENUM('USER', 'COUNSELOR', 'ADMIN') NOT NULL DEFAULT 'USER',
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY idx_users_nickname (nickname)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
   `);
 }
@@ -528,4 +532,44 @@ async function ensureUserColumns(
       );
     }
   }
+}
+
+/**
+ * 补齐 users 表昵称唯一索引，避免重复昵称写入。
+ */
+async function ensureUserIndexes(
+  connection: mysql.Connection,
+  databaseName: string,
+): Promise<void> {
+  const [indexes] = await connection.query<IndexNameRow[]>(
+    `SELECT INDEX_NAME AS indexName, NON_UNIQUE AS nonUnique
+     FROM information_schema.statistics
+     WHERE table_schema = ? AND table_name = 'users' AND column_name = 'nickname'`,
+    [databaseName],
+  );
+  const hasUniqueNickname = indexes.some(
+    (row) => row.nonUnique === 0 && row.indexName !== "PRIMARY",
+  );
+  if (hasUniqueNickname) {
+    return;
+  }
+
+  const [duplicates] = await connection.query<DuplicateNicknameRow[]>(
+    `SELECT nickname, COUNT(*) AS count
+     FROM users
+     WHERE nickname IS NOT NULL AND nickname <> ''
+     GROUP BY nickname
+     HAVING COUNT(*) > 1
+     LIMIT 1`,
+  );
+  if (duplicates.length > 0) {
+    const duplicate = duplicates[0]!;
+    throw new Error(
+      `昵称 "${duplicate.nickname}" 存在 ${duplicate.count} 条重复记录，请先处理后再启动服务。`,
+    );
+  }
+
+  await connection.query(
+    "ALTER TABLE users ADD UNIQUE KEY idx_users_nickname (nickname)",
+  );
 }

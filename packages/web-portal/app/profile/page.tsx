@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
   type FormEvent,
+  type MouseEvent,
   useEffect,
   useMemo,
   useState,
 } from "react";
 import {
-  API_BASE_URL,
   getProfile,
+  resolveAvatarUrl,
   updatePassword,
   updateProfile,
   uploadAvatar,
@@ -26,7 +27,6 @@ const DEFAULT_PROFILE_FORM: ProfileInput = {
   gender: "",
   major: "",
   grade: "",
-  avatarUrl: "",
 };
 
 type PasswordFormState = {
@@ -52,19 +52,6 @@ const ROLE_LABELS: Record<User["role"], string> = {
   COUNSELOR: "心理咨询师",
   ADMIN: "管理员",
 };
-
-/**
- * 将头像路径转换为可访问的完整 URL。
- */
-function resolveAvatarUrl(avatarUrl?: string | null) {
-  if (!avatarUrl) {
-    return "";
-  }
-  if (/^https?:\/\//i.test(avatarUrl)) {
-    return avatarUrl;
-  }
-  return `${API_BASE_URL}${avatarUrl.startsWith("/") ? "" : "/"}${avatarUrl}`;
-}
 
 /**
  * 格式化时间字符串，便于展示用户账号概览信息。
@@ -118,6 +105,7 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   /**
    * 加载个人资料并填充页面展示与表单初始值。
@@ -134,7 +122,6 @@ export default function ProfilePage() {
           gender: data.gender ?? "",
           major: data.major ?? "",
           grade: data.grade ?? "",
-          avatarUrl: data.avatarUrl ?? "",
         });
       } catch (err) {
         setLoadError(
@@ -177,7 +164,6 @@ export default function ProfilePage() {
         gender: updated.gender ?? "",
         major: updated.major ?? "",
         grade: updated.grade ?? "",
-        avatarUrl: updated.avatarUrl ?? "",
       });
       setProfileMessage("资料保存成功，已同步到链上存证记录。");
     } catch (err) {
@@ -232,10 +218,6 @@ export default function ProfilePage() {
     try {
       const updated = await uploadAvatar(avatarDataUrl);
       setProfile(updated);
-      setProfileForm((prev) => ({
-        ...prev,
-        avatarUrl: updated.avatarUrl ?? prev.avatarUrl ?? "",
-      }));
       setAvatarDataUrl(null);
       setAvatarPreview(null);
       setAvatarMessage("头像更新成功。");
@@ -259,6 +241,33 @@ export default function ProfilePage() {
   };
 
   /**
+   * 打开密码修改弹窗。
+   */
+  const openPasswordModal = () => {
+    setPasswordError(null);
+    setPasswordMessage(null);
+    setPasswordModalOpen(true);
+  };
+
+  /**
+   * 关闭密码修改弹窗。
+   */
+  const closePasswordModal = () => {
+    setPasswordModalOpen(false);
+  };
+
+  /**
+   * 点击遮罩时关闭弹窗。
+   */
+  const handlePasswordModalOverlayClick = (
+    event: MouseEvent<HTMLDivElement>,
+  ) => {
+    if (event.target === event.currentTarget) {
+      closePasswordModal();
+    }
+  };
+
+  /**
    * 提交密码修改请求。
    */
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -276,9 +285,11 @@ export default function ProfilePage() {
       newPassword: passwordForm.newPassword,
     };
     try {
-      const message = await updatePassword(payload);
-      setPasswordMessage(message);
+      await updatePassword(payload);
+      setPasswordMessage("密码修改成功");
       setPasswordForm(DEFAULT_PASSWORD_FORM);
+      localStorage.removeItem("campus_auth_token");
+      router.push("/login");
     } catch (err) {
       setPasswordError(
         err instanceof Error ? err.message : "修改密码失败，请稍后重试。",
@@ -311,7 +322,7 @@ export default function ProfilePage() {
             退出登录
           </button>
           <Link href="/" className="ghost-btn small">
-            返回仪表盘
+            返回首页
           </Link>
         </div>
       </header>
@@ -375,7 +386,7 @@ export default function ProfilePage() {
           <div className="avatar-actions">
             <input type="file" accept="image/*" onChange={handleAvatarSelect} />
             <button
-              className="btn btn-primary"
+              className="btn btn-primary small"
               type="button"
               onClick={handleAvatarUpload}
               disabled={avatarUploading}
@@ -385,7 +396,7 @@ export default function ProfilePage() {
             <p className="profile-hint">
               仅支持 PNG/JPEG/WEBP，大小不超过 2MB。
             </p>
-            {avatarMessage && <p className="status">{avatarMessage}</p>}
+            {avatarMessage && <p className="notice">{avatarMessage}</p>}
             {avatarError && <p className="status error">{avatarError}</p>}
           </div>
         </div>
@@ -438,85 +449,100 @@ export default function ProfilePage() {
               onChange={(event) => handleProfileChange("grade", event.target.value)}
             />
           </label>
-          <label>
-            头像链接（可选）
-            <input
-              type="url"
-              value={profileForm.avatarUrl ?? ""}
-              placeholder="https://example.com/avatar.png"
-              onChange={(event) => handleProfileChange("avatarUrl", event.target.value)}
-            />
-          </label>
           <div className="inline-actions">
             <button
-              className="btn btn-primary"
+              className="btn btn-primary small"
               disabled={profileSaving}
               type="submit"
             >
               {profileSaving ? "保存中..." : "保存资料"}
             </button>
-            {profileMessage && <div className="status">{profileMessage}</div>}
+            <button
+              className="btn btn-secondary small"
+              type="button"
+              onClick={openPasswordModal}
+            >
+              修改密码
+            </button>
+            {profileMessage && <div className="notice">{profileMessage}</div>}
             {profileError && <div className="status error">{profileError}</div>}
           </div>
         </form>
       </section>
 
-      <section className="profile-card">
-        <div className="panel-heading">
-          <div>
-            <h2>安全设置</h2>
-            <p>建议定期修改密码，提升账号安全。</p>
+      {passwordModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="password-modal-title"
+          onClick={handlePasswordModalOverlayClick}
+        >
+          <div className="modal-card">
+            <div className="modal-header">
+              <h3 id="password-modal-title">修改密码</h3>
+              <button className="ghost-btn small" type="button" onClick={closePasswordModal}>
+                关闭
+              </button>
+            </div>
+            <form className="security-form" onSubmit={handlePasswordSubmit}>
+              <label>
+                当前密码
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  placeholder="请输入当前密码"
+                  onChange={(event) =>
+                    handlePasswordChange("currentPassword", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                新密码
+                <input
+                  type="password"
+                  minLength={8}
+                  value={passwordForm.newPassword}
+                  placeholder="至少 8 位字符"
+                  onChange={(event) =>
+                    handlePasswordChange("newPassword", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                确认新密码
+                <input
+                  type="password"
+                  minLength={8}
+                  value={passwordForm.confirmPassword}
+                  placeholder="再次输入新密码"
+                  onChange={(event) =>
+                    handlePasswordChange("confirmPassword", event.target.value)
+                  }
+                />
+              </label>
+              <div className="inline-actions">
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={passwordSaving}
+                >
+                  {passwordSaving ? "修改中..." : "修改密码"}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={closePasswordModal}
+                >
+                  取消
+                </button>
+                {passwordMessage && <div className="notice">{passwordMessage}</div>}
+                {passwordError && <div className="status error">{passwordError}</div>}
+              </div>
+            </form>
           </div>
         </div>
-        <form className="security-form" onSubmit={handlePasswordSubmit}>
-          <label>
-            当前密码
-            <input
-              type="password"
-              value={passwordForm.currentPassword}
-              placeholder="请输入当前密码"
-              onChange={(event) =>
-                handlePasswordChange("currentPassword", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            新密码
-            <input
-              type="password"
-              minLength={8}
-              value={passwordForm.newPassword}
-              placeholder="至少 8 位字符"
-              onChange={(event) =>
-                handlePasswordChange("newPassword", event.target.value)
-              }
-            />
-          </label>
-          <label>
-            确认新密码
-            <input
-              type="password"
-              minLength={8}
-              value={passwordForm.confirmPassword}
-              placeholder="再次输入新密码"
-              onChange={(event) =>
-                handlePasswordChange("confirmPassword", event.target.value)
-              }
-            />
-          </label>
-          <div className="inline-actions">
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={passwordSaving}
-            >
-              {passwordSaving ? "修改中..." : "修改密码"}
-            </button>
-            {passwordMessage && <div className="status">{passwordMessage}</div>}
-            {passwordError && <div className="status error">{passwordError}</div>}
-          </div>
-        </form>
-      </section>
+      )}
     </div>
   );
 }

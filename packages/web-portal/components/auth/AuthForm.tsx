@@ -59,8 +59,8 @@ export function AuthForm({ mode }: Props) {
           identityCode: formData.identityCode,
           nickname: formData.nickname ? formData.nickname : undefined,
         };
-        const user = await registerUser(payload);
-        setSuccessMessage(`注册成功：${user.email}（${user.role}）`);
+        await registerUser(payload);
+        setSuccessMessage("注册成功");
       } else {
         const payload: LoginPayload = {
           email: formData.email,
@@ -68,7 +68,7 @@ export function AuthForm({ mode }: Props) {
         };
         const response = await loginUser(payload);
         localStorage.setItem("campus_auth_token", response.token);
-        setSuccessMessage(`登录成功，Token: ${response.token}`);
+        setSuccessMessage("登录成功");
         setTimeout(() => {
           router.push("/");
         }, 200);
@@ -140,7 +140,7 @@ export function AuthForm({ mode }: Props) {
       </button>
 
       {successMessage && (
-        <div className="status" role="status">
+        <div className="notice" role="status">
           {successMessage}
         </div>
       )}

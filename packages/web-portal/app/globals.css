@@ -68,6 +68,12 @@ a {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
+.btn.small {
+  flex: 0 0 auto;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
@@ -126,10 +132,19 @@ a {
   color: #fecaca;
 }
 
+.notice {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+}
+
 .hint {
   font-size: 0.85rem;
   color: #94a3b8;
   margin-top: -0.5rem;
+}
+
+.hint.spaced {
+  margin-top: 0.35rem;
 }
 
 .dashboard-shell {
@@ -162,9 +177,9 @@ a {
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 96px;
+  height: 96px;
+  border-radius: 32px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   display: inline-flex;
   align-items: center;
@@ -172,7 +187,17 @@ a {
   font-weight: 700;
 }
 
-.logo-icon + div strong {
+.logo-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 32px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.logo-icon + div strong,
+.logo-avatar + div strong {
   font-size: 1.15rem;
 }
 
@@ -660,6 +685,40 @@ a {
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 50;
+  backdrop-filter: blur(6px);
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 24px;
+  padding: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
 }
 
 .status {

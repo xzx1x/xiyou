@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
             {requesting ? "发送中..." : "发送验证码"}
           </button>
           {requestMessage && (
-            <div className="status" role="status">
+            <div className="notice" role="status">
               {requestMessage}
             </div>
           )}
@@ -125,7 +125,7 @@ export default function ResetPasswordPage() {
             {confirming ? "重置中..." : "确认重置"}
           </button>
           {confirmMessage && (
-            <div className="status" role="status">
+            <div className="notice" role="status">
               {confirmMessage}
             </div>
           )}
