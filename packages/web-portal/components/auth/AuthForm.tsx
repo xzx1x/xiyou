@@ -61,6 +61,9 @@ export function AuthForm({ mode }: Props) {
         };
         await registerUser(payload);
         setSuccessMessage("注册成功");
+        setTimeout(() => {
+          router.push("/login");
+        }, 200);
       } else {
         const payload: LoginPayload = {
           email: formData.email,

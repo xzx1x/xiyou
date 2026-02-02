@@ -10,6 +10,7 @@ export type ReportRecord = {
   targetType: ReportTargetType;
   targetId: string;
   reason: string;
+  attachmentUrl: string | null;
   status: ReportStatus;
   actionTaken: string | null;
   resolvedBy: string | null;
@@ -40,13 +41,14 @@ export async function createReport(
   payload: ReportRecord,
 ): Promise<ReportRecord> {
   await pool.execute<ResultSetHeader>(
-    "INSERT INTO reports (id, reporter_id, target_type, target_id, reason, status, action_taken, resolved_by, resolved_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO reports (id, reporter_id, target_type, target_id, reason, attachment_url, status, action_taken, resolved_by, resolved_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     [
       payload.id,
       payload.reporterId,
       payload.targetType,
       payload.targetId,
       payload.reason,
+      payload.attachmentUrl ?? null,
       payload.status,
       payload.actionTaken ?? null,
       payload.resolvedBy ?? null,
@@ -97,6 +99,7 @@ function mapReport(row: RowDataPacket): ReportRecord {
     targetType: row.target_type,
     targetId: row.target_id,
     reason: row.reason,
+    attachmentUrl: row.attachment_url ?? null,
     status: row.status,
     actionTaken: row.action_taken,
     resolvedBy: row.resolved_by,

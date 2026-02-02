@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
-import { listReports, resolveReport, type ReportRecord } from "../../../lib/api";
+import { listReports, resolveAvatarUrl, resolveReport, type ReportRecord } from "../../../lib/api";
 
 /**
  * 管理员举报处理页面。
@@ -36,6 +36,22 @@ export default function AdminReportsPage() {
   useEffect(() => {
     loadReports();
   }, []);
+
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+    const timer = window.setTimeout(() => setMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
 
   /**
    * 处理举报。
@@ -81,6 +97,21 @@ export default function AdminReportsPage() {
                   <strong>举报对象：{report.targetType}</strong>
                   <div className="muted">对象编号：{report.targetId}</div>
                   <div className="muted">原因：{report.reason}</div>
+                  {report.attachmentUrl && (
+                    <div className="report-attachment">
+                      <a
+                        href={resolveAvatarUrl(report.attachmentUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        查看附件
+                      </a>
+                      <img
+                        src={resolveAvatarUrl(report.attachmentUrl)}
+                        alt="举报附件"
+                      />
+                    </div>
+                  )}
                 </div>
                 <button className="btn btn-secondary" onClick={() => handleResolve(report.id)}>
                   处理举报

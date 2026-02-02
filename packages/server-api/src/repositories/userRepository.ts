@@ -288,6 +288,22 @@ export async function listUsersByRole(
 }
 
 /**
+ * 根据用户编号批量读取用户信息。
+ */
+export async function listUsersByIds(ids: string[]): Promise<UserRecord[]> {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+  const placeholders = uniqueIds.map(() => "?").join(", ");
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT * FROM users WHERE id IN (${placeholders})`,
+    uniqueIds,
+  );
+  return rows.map(mapRow);
+}
+
+/**
  * 读取用户的禁用状态与角色，供鉴权中间件使用。
  */
 export async function findUserAccessInfo(

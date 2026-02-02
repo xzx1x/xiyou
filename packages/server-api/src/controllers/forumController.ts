@@ -63,7 +63,7 @@ export async function listForumPosts(ctx: Context) {
  */
 export async function getForumPostDetail(ctx: Context) {
   // 当前登录用户，用于校验帖子可见性。
-  const authUser = ctx.state.user as { role?: string } | undefined;
+  const authUser = ctx.state.user as { role?: string; sub?: string } | undefined;
   if (!authUser?.role) {
     ctx.throw(401, "未授权");
   }
@@ -71,7 +71,7 @@ export async function getForumPostDetail(ctx: Context) {
   if (!postId) {
     throw new BadRequestError("帖子编号不能为空");
   }
-  const post = await getPostDetail(postId);
+  const post = await getPostDetail(postId, authUser.sub);
   if (post.status !== "APPROVED" && authUser.role !== "ADMIN") {
     throw new UnauthorizedError("帖子尚未通过审核");
   }

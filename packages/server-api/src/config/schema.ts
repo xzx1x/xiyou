@@ -370,6 +370,7 @@ async function createReportTables(
       target_type ENUM('POST', 'COMMENT', 'USER', 'COUNSELOR') NOT NULL,
       target_id VARCHAR(36) NOT NULL,
       reason TEXT NOT NULL,
+      attachment_url VARCHAR(255) NULL,
       status ENUM('PENDING', 'RESOLVED') NOT NULL DEFAULT 'PENDING',
       action_taken VARCHAR(255) NULL,
       resolved_by VARCHAR(36) NULL,

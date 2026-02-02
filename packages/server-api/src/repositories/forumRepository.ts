@@ -21,6 +21,7 @@ export type ForumCommentRecord = {
   id: string;
   postId: string;
   authorId: string | null;
+  parentId: string | null;
   content: string;
   createdAt: Date;
 };
@@ -105,16 +106,33 @@ export async function createForumComment(
   payload: ForumCommentRecord,
 ): Promise<ForumCommentRecord> {
   await pool.execute<ResultSetHeader>(
-    "INSERT INTO forum_comments (id, post_id, author_id, content, created_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO forum_comments (id, post_id, author_id, parent_id, content, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     [
       payload.id,
       payload.postId,
       payload.authorId ?? null,
+      payload.parentId ?? null,
       payload.content,
       payload.createdAt,
     ],
   );
   return payload;
+}
+
+/**
+ * 查询评论详情。
+ */
+export async function findForumCommentById(
+  id: string,
+): Promise<ForumCommentRecord | null> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT * FROM forum_comments WHERE id = ? LIMIT 1",
+    [id],
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  return mapForumComment(rows[0]!);
 }
 
 /**
@@ -127,13 +145,7 @@ export async function listForumComments(
     "SELECT * FROM forum_comments WHERE post_id = ? ORDER BY created_at ASC",
     [postId],
   );
-  return rows.map((row) => ({
-    id: row.id,
-    postId: row.post_id,
-    authorId: row.author_id,
-    content: row.content,
-    createdAt: new Date(row.created_at),
-  }));
+  return rows.map(mapForumComment);
 }
 
 /**
@@ -144,7 +156,7 @@ export async function likeForumPost(
   userId: string,
 ): Promise<void> {
   await pool.execute<ResultSetHeader>(
-    "INSERT INTO forum_likes (post_id, user_id, created_at) VALUES (?, ?, ?)",
+    "INSERT IGNORE INTO forum_likes (post_id, user_id, created_at) VALUES (?, ?, ?)",
     [postId, userId, new Date()],
   );
 }
@@ -176,6 +188,20 @@ export async function countForumLikes(postId: string): Promise<number> {
   return Number(rows[0]!.total ?? 0);
 }
 
+/**
+ * 判断用户是否已点赞帖子。
+ */
+export async function hasForumLike(
+  postId: string,
+  userId: string,
+): Promise<boolean> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT 1 FROM forum_likes WHERE post_id = ? AND user_id = ? LIMIT 1",
+    [postId, userId],
+  );
+  return rows.length > 0;
+}
+
 function mapForumPost(row: RowDataPacket): ForumPostRecord {
   return {
     id: row.id,
@@ -189,5 +215,16 @@ function mapForumPost(row: RowDataPacket): ForumPostRecord {
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at) : null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+  };
+}
+
+function mapForumComment(row: RowDataPacket): ForumCommentRecord {
+  return {
+    id: row.id,
+    postId: row.post_id,
+    authorId: row.author_id,
+    parentId: row.parent_id ?? null,
+    content: row.content,
+    createdAt: new Date(row.created_at),
   };
 }

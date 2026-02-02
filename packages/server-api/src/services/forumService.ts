@@ -1,6 +1,7 @@
 import {
   createForumComment,
   createForumPost,
+  findForumCommentById,
   findForumPostById,
   listForumComments,
   listForumPosts,
@@ -8,12 +9,31 @@ import {
   likeForumPost,
   unlikeForumPost,
   countForumLikes,
+  hasForumLike,
   type ForumPostStatus,
+  type ForumPostRecord,
+  type ForumCommentRecord,
 } from "../repositories/forumRepository";
-import { listUsersByRole } from "../repositories/userRepository";
+import {
+  findUserById,
+  listUsersByIds,
+  listUsersByRole,
+  type UserRecord,
+  type UserRole,
+} from "../repositories/userRepository";
 import { BadRequestError } from "../utils/errors";
 import { createEvidencePlaceholder } from "./evidenceService";
 import { notifyInApp } from "./notificationService";
+
+export type PublicUserProfile = {
+  id: string;
+  nickname: string | null;
+  gender: string | null;
+  major: string | null;
+  grade: string | null;
+  avatarUrl: string | null;
+  role: UserRole;
+};
 
 export type ForumPostInput = {
   title: string;
@@ -23,8 +43,45 @@ export type ForumPostInput = {
 
 export type ForumCommentInput = {
   postId: string;
+  parentId?: string;
   content: string;
 };
+
+function toPublicProfile(user: UserRecord): PublicUserProfile {
+  return {
+    id: user.id,
+    nickname: user.nickname,
+    gender: user.gender,
+    major: user.major,
+    grade: user.grade,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+  };
+}
+
+async function attachAuthors(posts: ForumPostRecord[]) {
+  const authorIds = Array.from(
+    new Set(posts.map((post) => post.authorId).filter((id): id is string => !!id)),
+  );
+  const users = await listUsersByIds(authorIds);
+  const authorMap = new Map(users.map((user) => [user.id, toPublicProfile(user)]));
+  return posts.map((post) => ({
+    ...post,
+    author: post.isAnonymous || !post.authorId ? null : authorMap.get(post.authorId) ?? null,
+  }));
+}
+
+async function attachCommentAuthors(comments: ForumCommentRecord[]) {
+  const authorIds = Array.from(
+    new Set(comments.map((comment) => comment.authorId).filter((id): id is string => !!id)),
+  );
+  const users = await listUsersByIds(authorIds);
+  const authorMap = new Map(users.map((user) => [user.id, toPublicProfile(user)]));
+  return comments.map((comment) => ({
+    ...comment,
+    author: comment.authorId ? authorMap.get(comment.authorId) ?? null : null,
+  }));
+}
 
 /**
  * 发布帖子，默认进入待审核状态。
@@ -39,7 +96,7 @@ export async function createPost(
     title: payload.title,
     content: payload.content,
     status: "PENDING",
-    isAnonymous: payload.isAnonymous ?? false,
+    isAnonymous: false,
     reviewReason: null,
     reviewedBy: null,
     reviewedAt: null,
@@ -50,9 +107,11 @@ export async function createPost(
   const evidence = await createEvidencePlaceholder({
     targetType: "FORUM_POST",
     targetId: record.id,
-    summary: "匿名论坛帖子发布",
+    summary: "论坛帖子发布",
   });
   const admins = await listUsersByRole("ADMIN");
+  const author = await findUserById(authorId);
+  const authorProfile = author ? toPublicProfile(author) : null;
   await Promise.all(
     admins.map((admin) =>
       notifyInApp(
@@ -63,26 +122,33 @@ export async function createPost(
       ),
     ),
   );
-  return { post: record, evidence };
+  return { post: { ...record, author: authorProfile }, evidence };
 }
 
 /**
  * 获取帖子列表。
  */
 export async function getPosts(status?: ForumPostStatus) {
-  return listForumPosts({ status });
+  const posts = await listForumPosts({ status });
+  return attachAuthors(posts);
 }
 
 /**
- * 获取帖子详情并附带点赞数。
+ * 获取帖子详情并附带点赞信息。
  */
-export async function getPostDetail(postId: string) {
+export async function getPostDetail(postId: string, userId?: string | null) {
   const post = await findForumPostById(postId);
   if (!post) {
     throw new BadRequestError("帖子不存在");
   }
   const likeCount = await countForumLikes(postId);
-  return { ...post, likeCount };
+  const liked = userId ? await hasForumLike(postId, userId) : false;
+  let authorProfile: PublicUserProfile | null = null;
+  if (!post.isAnonymous && post.authorId) {
+    const author = await findUserById(post.authorId);
+    authorProfile = author ? toPublicProfile(author) : null;
+  }
+  return { ...post, likeCount, liked, author: authorProfile };
 }
 
 /**
@@ -117,20 +183,38 @@ export async function addComment(
   if (!post || post.status !== "APPROVED") {
     throw new BadRequestError("帖子尚未通过审核");
   }
-  return createForumComment({
+  let parentId: string | null = null;
+  if (payload.parentId) {
+    const parent = await findForumCommentById(payload.parentId);
+    if (!parent || parent.postId !== payload.postId) {
+      throw new BadRequestError("回复的评论不存在");
+    }
+    if (parent.parentId) {
+      throw new BadRequestError("最多只支持二级评论");
+    }
+    parentId = parent.id;
+  }
+  const record = await createForumComment({
     id: crypto.randomUUID(),
     postId: payload.postId,
     authorId,
+    parentId,
     content: payload.content,
     createdAt: new Date(),
   });
+  const author = await findUserById(authorId);
+  return {
+    ...record,
+    author: author ? toPublicProfile(author) : null,
+  };
 }
 
 /**
  * 获取评论列表。
  */
 export async function getComments(postId: string) {
-  return listForumComments(postId);
+  const comments = await listForumComments(postId);
+  return attachCommentAuthors(comments);
 }
 
 /**

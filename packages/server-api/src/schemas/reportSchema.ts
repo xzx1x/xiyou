@@ -5,6 +5,7 @@ export const reportCreateSchema = z.object({
   targetType: z.enum(["POST", "COMMENT", "USER", "COUNSELOR"]),
   targetId: z.string().min(1, "举报对象编号不能为空"),
   reason: z.string().min(1, "举报原因不能为空").max(2000),
+  attachmentDataUrl: z.string().optional().nullable(),
 });
 
 // 举报处理校验。

@@ -194,9 +194,11 @@ CREATE TABLE IF NOT EXISTS `forum_comments` (
   `id` VARCHAR(36) NOT NULL PRIMARY KEY,
   `post_id` VARCHAR(36) NOT NULL,
   `author_id` VARCHAR(36) NULL,
+  `parent_id` VARCHAR(36) NULL,
   `content` TEXT NOT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY `idx_forum_comment_post` (`post_id`)
+  KEY `idx_forum_comment_post` (`post_id`),
+  KEY `idx_forum_comment_parent` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `forum_likes` (
@@ -212,6 +214,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
   `target_type` ENUM('POST', 'COMMENT', 'USER', 'COUNSELOR') NOT NULL,
   `target_id` VARCHAR(36) NOT NULL,
   `reason` TEXT NOT NULL,
+  `attachment_url` VARCHAR(255) NULL,
   `status` ENUM('PENDING', 'RESOLVED') NOT NULL DEFAULT 'PENDING',
   `action_taken` VARCHAR(255) NULL,
   `resolved_by` VARCHAR(36) NULL,

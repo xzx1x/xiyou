@@ -37,6 +37,22 @@ export default function AdminForumReviewPage() {
     loadPosts();
   }, []);
 
+  useEffect(() => {
+    if (!message) {
+      return;
+    }
+    const timer = window.setTimeout(() => setMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
   /**
    * 审核帖子。
    */
@@ -78,7 +94,12 @@ export default function AdminForumReviewPage() {
               <li key={post.id}>
                 <div>
                   <strong>{post.title}</strong>
-                  <div className="muted">作者：{post.authorId ?? "匿名"}</div>
+                  <div className="muted">
+                    作者：
+                    {post.isAnonymous
+                      ? "匿名用户"
+                      : post.author?.nickname ?? post.authorId ?? "未知"}
+                  </div>
                 </div>
                 <div className="button-row">
                   <button className="btn btn-secondary" onClick={() => handleReview(post.id, "APPROVED")}>

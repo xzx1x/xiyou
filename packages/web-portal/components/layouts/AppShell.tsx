@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode, useEffect } from "react";
 import { getProfile, resolveAvatarUrl, type User, type UserRole } from "../../lib/api";
 
@@ -71,6 +72,7 @@ export function AppShell({
   // 是否使用默认面板布局包裹内容。
   withPanel = true,
 }: AppShellProps) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -202,9 +204,9 @@ export function AppShell({
                 <h2>{title}</h2>
                 <p>{description ?? `当前身份：${user?.role ?? "未知"}`}</p>
               </div>
-              <Link href="/profile" className="ghost-btn small">
-                管理资料
-              </Link>
+              <button className="ghost-btn small" type="button" onClick={() => router.back()}>
+                返回
+              </button>
             </div>
             <div className="panel-body">{children}</div>
           </section>

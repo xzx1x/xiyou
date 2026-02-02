@@ -35,6 +35,16 @@ export interface User {
   updatedAt: string;
 }
 
+export interface PublicUserProfile {
+  id: string;
+  nickname?: string | null;
+  gender?: string | null;
+  major?: string | null;
+  grade?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+}
+
 export interface RegisterPayload {
   email: string;
   password: string;
@@ -230,6 +240,7 @@ export interface FriendRecord {
 export interface ForumPost {
   id: string;
   authorId?: string | null;
+  author?: PublicUserProfile | null;
   title: string;
   content: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
@@ -240,6 +251,7 @@ export interface ForumPost {
   createdAt: string;
   updatedAt: string;
   likeCount?: number;
+  liked?: boolean;
 }
 
 // 论坛评论结构。
@@ -247,6 +259,8 @@ export interface ForumComment {
   id: string;
   postId: string;
   authorId?: string | null;
+  parentId?: string | null;
+  author?: PublicUserProfile | null;
   content: string;
   createdAt: string;
 }
@@ -258,6 +272,7 @@ export interface ReportRecord {
   targetType: "POST" | "COMMENT" | "USER" | "COUNSELOR";
   targetId: string;
   reason: string;
+  attachmentUrl?: string | null;
   status: "PENDING" | "RESOLVED";
   actionTaken?: string | null;
   resolvedBy?: string | null;
@@ -1128,7 +1143,6 @@ export async function listFriends(): Promise<FriendRecord[]> {
 export async function createForumPost(payload: {
   title: string;
   content: string;
-  isAnonymous?: boolean;
 }): Promise<ForumPostCreateResponse> {
   return request<ForumPostCreateResponse>("/api/forum/posts", {
     method: "POST",
@@ -1178,7 +1192,11 @@ export async function reviewForumPost(
 /**
  * 发布论坛评论。
  */
-export async function createForumComment(payload: { postId: string; content: string }): Promise<ForumComment> {
+export async function createForumComment(payload: {
+  postId: string;
+  content: string;
+  parentId?: string;
+}): Promise<ForumComment> {
   const { comment } = await request<ForumCommentResponse>("/api/forum/comments", {
     method: "POST",
     auth: true,
@@ -1227,6 +1245,7 @@ export async function createReport(payload: {
   targetType: "POST" | "COMMENT" | "USER" | "COUNSELOR";
   targetId: string;
   reason: string;
+  attachmentDataUrl?: string | null;
 }): Promise<ReportCreateResponse> {
   return request<ReportCreateResponse>("/api/reports", {
     method: "POST",

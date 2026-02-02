@@ -6,6 +6,8 @@ import {
   type ReportStatus,
   type ReportTargetType,
 } from "../repositories/reportRepository";
+import { mkdir, writeFile } from "fs/promises";
+import { join, resolve } from "path";
 import { listUsersByRole, updateUserStatus } from "../repositories/userRepository";
 import { BadRequestError } from "../utils/errors";
 import { createEvidencePlaceholder } from "./evidenceService";
@@ -16,6 +18,7 @@ export type ReportInput = {
   targetType: ReportTargetType;
   targetId: string;
   reason: string;
+  attachmentDataUrl?: string | null;
 };
 
 // 举报处理时的输入结构，可选包含封禁目标的开关。
@@ -24,6 +27,55 @@ export type ReportResolveInput = {
   disableTarget?: boolean;
 };
 
+type ReportAttachmentParseResult = {
+  buffer: Buffer;
+  extension: string;
+};
+
+const REPORT_ATTACHMENT_STORAGE_DIR = resolve(process.cwd(), "uploads", "reports");
+const MAX_REPORT_ATTACHMENT_BYTES = 2 * 1024 * 1024;
+const REPORT_ATTACHMENT_MIME_TO_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+};
+
+function parseReportAttachmentDataUrl(dataUrl: string): ReportAttachmentParseResult {
+  const match = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i.exec(dataUrl);
+  if (!match) {
+    throw new BadRequestError("附件格式不正确，仅支持 PNG/JPEG/WEBP 图片");
+  }
+  const mimeType = (match[1] ?? "").toLowerCase();
+  const base64Payload = match[2] ?? "";
+  if (!mimeType || !base64Payload) {
+    throw new BadRequestError("附件格式不正确，仅支持 PNG/JPEG/WEBP 图片");
+  }
+  const buffer = Buffer.from(base64Payload, "base64");
+  if (buffer.length === 0) {
+    throw new BadRequestError("附件内容为空");
+  }
+  if (buffer.length > MAX_REPORT_ATTACHMENT_BYTES) {
+    throw new BadRequestError("附件大小不能超过 2MB");
+  }
+  const extension = REPORT_ATTACHMENT_MIME_TO_EXT[mimeType];
+  if (!extension) {
+    throw new BadRequestError("附件格式不正确，仅支持 PNG/JPEG/WEBP 图片");
+  }
+  return { buffer, extension };
+}
+
+async function saveReportAttachmentFile(
+  reportId: string,
+  dataUrl: string,
+): Promise<string> {
+  const { buffer, extension } = parseReportAttachmentDataUrl(dataUrl);
+  await mkdir(REPORT_ATTACHMENT_STORAGE_DIR, { recursive: true });
+  const fileName = `${reportId}-${Date.now()}-${crypto.randomUUID()}.${extension}`;
+  const filePath = join(REPORT_ATTACHMENT_STORAGE_DIR, fileName);
+  await writeFile(filePath, buffer);
+  return `/uploads/reports/${fileName}`;
+}
+
 /**
  * 创建举报记录并通知管理员处理。
  */
@@ -31,12 +83,17 @@ export async function submitReport(
   reporterId: string,
   payload: ReportInput,
 ) {
+  const reportId = crypto.randomUUID();
+  const attachmentUrl = payload.attachmentDataUrl
+    ? await saveReportAttachmentFile(reportId, payload.attachmentDataUrl)
+    : null;
   const report = await createReport({
-    id: crypto.randomUUID(),
+    id: reportId,
     reporterId,
     targetType: payload.targetType,
     targetId: payload.targetId,
     reason: payload.reason,
+    attachmentUrl,
     status: "PENDING",
     actionTaken: null,
     resolvedBy: null,

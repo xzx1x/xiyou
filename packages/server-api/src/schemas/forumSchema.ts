@@ -4,12 +4,13 @@ import { z } from "zod";
 export const forumPostSchema = z.object({
   title: z.string().min(1, "标题不能为空").max(200),
   content: z.string().min(1, "内容不能为空").max(10000),
-  isAnonymous: z.boolean().optional(),
+  isAnonymous: z.literal(false).optional(),
 });
 
 // 评论提交校验。
 export const forumCommentSchema = z.object({
   postId: z.string().min(1, "帖子编号不能为空"),
+  parentId: z.string().min(1, "回复评论编号不能为空").optional(),
   content: z.string().min(1, "评论不能为空").max(2000),
 });
 

@@ -34,6 +34,14 @@ export default function ArticlesPage() {
     loadItems();
   }, []);
 
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
   if (loading) {
     return (
       <AppShell title="文章阅读">

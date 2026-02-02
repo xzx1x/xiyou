@@ -8,6 +8,9 @@ import { BadRequestError } from "../utils/errors";
 const AVATAR_ROOT = resolve(process.cwd(), "uploads", "avatars");
 // 允许读取的扩展名，避免暴露任意文件。
 const ALLOWED_AVATAR_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+// 举报附件目录与允许扩展名。
+const REPORT_ATTACHMENT_ROOT = resolve(process.cwd(), "uploads", "reports");
+const ALLOWED_REPORT_ATTACHMENT_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 
 /**
  * 判断请求的文件名是否为安全的文件名（仅允许字母数字与常见符号）。
@@ -44,6 +47,33 @@ staticRouter.get("/uploads/avatars/:fileName", async (ctx) => {
   }
   const filePath = resolve(join(AVATAR_ROOT, fileName));
   if (!isPathWithinRoot(AVATAR_ROOT, filePath)) {
+    throw new BadRequestError("非法文件路径");
+  }
+  const stats = await stat(filePath).catch(() => null);
+  if (!stats || !stats.isFile()) {
+    ctx.status = 404;
+    return;
+  }
+  ctx.type = extension;
+  ctx.set("Cache-Control", "public, max-age=3600");
+  ctx.body = createReadStream(filePath);
+});
+
+/**
+ * 举报附件读取接口，前端可通过 /uploads/reports/:fileName 访问。
+ */
+staticRouter.get("/uploads/reports/:fileName", async (ctx) => {
+  const fileName = ctx.params.fileName;
+  if (!fileName || !isSafeFileName(fileName)) {
+    throw new BadRequestError("非法文件名");
+  }
+  const extension = extname(fileName).toLowerCase();
+  if (!ALLOWED_REPORT_ATTACHMENT_EXT.has(extension)) {
+    ctx.status = 404;
+    return;
+  }
+  const filePath = resolve(join(REPORT_ATTACHMENT_ROOT, fileName));
+  if (!isPathWithinRoot(REPORT_ATTACHMENT_ROOT, filePath)) {
     throw new BadRequestError("非法文件路径");
   }
   const stats = await stat(filePath).catch(() => null);
