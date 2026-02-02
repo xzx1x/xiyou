@@ -54,7 +54,6 @@ const COUNSELOR_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { label: "账号管理", href: "/admin/users" },
   { label: "心理师审批", href: "/admin/counselor-applications" },
-  { label: "内容管理", href: "/admin/content" },
   { label: "论坛审核", href: "/admin/forum-review" },
   { label: "举报处理", href: "/admin/reports" },
   { label: "统计报表", href: "/admin/stats" },

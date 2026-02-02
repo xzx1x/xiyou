@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
 import { listReports, resolveAvatarUrl, resolveReport, type ReportRecord } from "../../../lib/api";
 
@@ -16,6 +16,13 @@ export default function AdminReportsPage() {
   const [message, setMessage] = useState<string | null>(null);
   // 错误提示信息。
   const [error, setError] = useState<string | null>(null);
+  // 处理举报弹窗。
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+  const [activeReport, setActiveReport] = useState<ReportRecord | null>(null);
+  const [resolveActionTaken, setResolveActionTaken] = useState("");
+  const [resolveDisableTarget, setResolveDisableTarget] = useState(false);
+  const [resolveSubmitting, setResolveSubmitting] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   /**
    * 加载举报列表。
@@ -53,23 +60,61 @@ export default function AdminReportsPage() {
     return () => window.clearTimeout(timer);
   }, [error]);
 
+  useEffect(() => {
+    if (!resolveError) {
+      return;
+    }
+    const timer = window.setTimeout(() => setResolveError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [resolveError]);
+
+  const openResolveModal = (report: ReportRecord) => {
+    setActiveReport(report);
+    setResolveActionTaken("");
+    setResolveDisableTarget(false);
+    setResolveError(null);
+    setResolveModalOpen(true);
+  };
+
+  const closeResolveModal = () => {
+    setResolveModalOpen(false);
+    setActiveReport(null);
+    setResolveActionTaken("");
+    setResolveDisableTarget(false);
+    setResolveError(null);
+  };
+
+  const handleResolveModalOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      closeResolveModal();
+    }
+  };
+
   /**
    * 处理举报。
    */
-  const handleResolve = async (reportId: string) => {
+  const handleResolveSubmit = async () => {
+    if (!activeReport) {
+      return;
+    }
+    const canDisableTarget =
+      activeReport.targetType === "USER" || activeReport.targetType === "COUNSELOR";
     setMessage(null);
     setError(null);
+    setResolveError(null);
+    setResolveSubmitting(true);
     try {
-      const actionTaken = window.prompt("请输入处理意见") ?? "";
-      const disableTarget = window.confirm("是否封禁该举报对象？");
-      const result = await resolveReport(reportId, {
-        actionTaken: actionTaken || undefined,
-        disableTarget,
+      const result = await resolveReport(activeReport.id, {
+        actionTaken: resolveActionTaken.trim() || undefined,
+        disableTarget: canDisableTarget ? resolveDisableTarget : false,
       });
       setMessage(result);
+      closeResolveModal();
       await loadReports();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "处理失败");
+      setResolveError(err instanceof Error ? err.message : "处理失败");
+    } finally {
+      setResolveSubmitting(false);
     }
   };
 
@@ -113,7 +158,7 @@ export default function AdminReportsPage() {
                     </div>
                   )}
                 </div>
-                <button className="btn btn-secondary" onClick={() => handleResolve(report.id)}>
+                <button className="btn btn-secondary" onClick={() => openResolveModal(report)}>
                   处理举报
                 </button>
               </li>
@@ -121,6 +166,67 @@ export default function AdminReportsPage() {
           </ul>
         )}
       </div>
+      {resolveModalOpen && activeReport && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resolve-modal-title"
+          onClick={handleResolveModalOverlayClick}
+        >
+          <div className="modal-card">
+            <div className="modal-header">
+              <h3 id="resolve-modal-title">处理举报</h3>
+              <button className="btn btn-secondary" type="button" onClick={closeResolveModal}>
+                关闭
+              </button>
+            </div>
+            {resolveError && <div className="status error">{resolveError}</div>}
+            <div className="form-stack">
+              <div className="report-target">
+                <span>举报对象</span>
+                <strong>{activeReport.targetType}</strong>
+                <span className="muted">{activeReport.targetId}</span>
+              </div>
+              <label className="inline-field">
+                <span>处理意见</span>
+                <textarea
+                  value={resolveActionTaken}
+                  onChange={(event) => setResolveActionTaken(event.target.value)}
+                  placeholder="请输入处理意见"
+                />
+              </label>
+              <label className="inline-field">
+                <span>封禁对象</span>
+                <input
+                  type="checkbox"
+                  checked={resolveDisableTarget}
+                  disabled={
+                    activeReport.targetType !== "USER" && activeReport.targetType !== "COUNSELOR"
+                  }
+                  onChange={(event) => setResolveDisableTarget(event.target.checked)}
+                />
+              </label>
+              {activeReport.targetType !== "USER" && activeReport.targetType !== "COUNSELOR" && (
+                <span className="muted">仅支持封禁用户或心理师。</span>
+              )}
+              <div className="button-row">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleResolveSubmit}
+                  disabled={resolveSubmitting}
+                >
+                  {resolveSubmitting ? "提交中..." : "提交处理"}
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={closeResolveModal}>
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

@@ -11,6 +11,13 @@ export async function requestLogger(ctx: Context, next: Next): Promise<void> {
   } finally {
     const durationMs = Date.now() - startTime;
     const authUser = ctx.state.user as { sub?: string } | undefined;
+    const userAgentRaw = ctx.headers["user-agent"] as string | string[] | undefined;
+    const userAgent =
+      typeof userAgentRaw === "string"
+        ? userAgentRaw
+        : Array.isArray(userAgentRaw)
+          ? userAgentRaw.join(", ")
+          : null;
     await createRequestLog({
       userId: authUser?.sub ?? null,
       method: ctx.method,
@@ -18,7 +25,7 @@ export async function requestLogger(ctx: Context, next: Next): Promise<void> {
       status: ctx.status,
       durationMs,
       ip: ctx.ip,
-      userAgent: ctx.headers["user-agent"],
+      userAgent,
     });
   }
 }

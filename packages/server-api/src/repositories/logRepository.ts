@@ -53,10 +53,9 @@ export async function listRequestLogs(
   limit = 200,
 ): Promise<RequestLogRecord[]> {
   // 限制返回数量，避免日志查询过大影响性能。
-  const safeLimit = Math.min(Math.max(limit, 1), 500);
-  const [rows] = await pool.execute<any[]>(
-    "SELECT * FROM request_logs ORDER BY created_at DESC LIMIT ?",
-    [safeLimit],
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 500);
+  const [rows] = await pool.query<any[]>(
+    `SELECT * FROM request_logs ORDER BY created_at DESC LIMIT ${safeLimit}`,
   );
   return rows.map((row) => ({
     id: row.id,
