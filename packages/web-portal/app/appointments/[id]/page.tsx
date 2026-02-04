@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { cancelAppointment, getAppointmentDetail, type Appointment } from "../../../lib/api";
 
 /**
@@ -89,14 +90,20 @@ export default function AppointmentDetailPage() {
 
   return (
     <AppShell title="预约详情" requiredRoles={["USER"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       {appointment ? (
         <div className="card-block">
           <h3>预约信息</h3>
-          <p>编号：{appointment.id}</p>
           <p>状态：{appointment.status}</p>
-          <p>咨询师：{appointment.counselorId}</p>
           <p>备注：{appointment.userNote ?? "-"}</p>
           <p>创建时间：{new Date(appointment.createdAt).toLocaleString("zh-CN")}</p>
           {appointment.status === "BOOKED" && (

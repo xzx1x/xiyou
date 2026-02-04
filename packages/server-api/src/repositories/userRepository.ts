@@ -275,6 +275,20 @@ export async function listUsers(keyword?: string): Promise<UserRecord[]> {
 }
 
 /**
+ * 按关键词搜索公开用户（昵称/学号），用于好友查找。
+ */
+export async function searchUsersByKeyword(
+  keyword: string,
+): Promise<UserRecord[]> {
+  const search = `%${keyword.toLowerCase()}%`;
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT * FROM users WHERE (LOWER(nickname) LIKE ? OR LOWER(identity_code) LIKE ?) AND is_disabled = 0 ORDER BY created_at DESC LIMIT 20",
+    [search, search],
+  );
+  return rows.map(mapRow);
+}
+
+/**
  * 根据角色列出用户列表，常用于通知或审批。
  */
 export async function listUsersByRole(

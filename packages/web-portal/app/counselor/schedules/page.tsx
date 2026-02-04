@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import {
   cancelCounselorSchedule,
   createCounselorSchedule,
@@ -114,8 +115,16 @@ export default function CounselorSchedulesPage() {
 
   return (
     <AppShell title="档期管理" requiredRoles={["COUNSELOR"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="split-grid">
         <div className="card-block">
           <h3>创建档期</h3>

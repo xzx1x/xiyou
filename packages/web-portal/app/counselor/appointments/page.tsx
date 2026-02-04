@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import {
   cancelAppointment,
   completeAppointment,
@@ -125,8 +126,16 @@ export default function CounselorAppointmentsPage() {
 
   return (
     <AppShell title="预约查看" requiredRoles={["COUNSELOR"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="card-block">
         <h3>预约列表</h3>
         {appointments.length === 0 ? (
@@ -136,8 +145,7 @@ export default function CounselorAppointmentsPage() {
             {appointments.map((appointment) => (
               <li key={appointment.id}>
                 <div>
-                  <strong>预约编号：{appointment.id}</strong>
-                  <div className="muted">来访者：{appointment.userId}</div>
+                  <strong>预约时间：{new Date(appointment.createdAt).toLocaleString("zh-CN")}</strong>
                   <div className="muted">状态：{appointment.status}</div>
                 </div>
                 <div className="form-stack">

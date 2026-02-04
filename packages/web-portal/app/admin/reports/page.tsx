@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type MouseEvent } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { listReports, resolveAvatarUrl, resolveReport, type ReportRecord } from "../../../lib/api";
 
 /**
@@ -128,8 +129,17 @@ export default function AdminReportsPage() {
 
   return (
     <AppShell title="举报处理" requiredRoles={["ADMIN"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(resolveError || error || message) && (
+        <CenterToast
+          type={resolveError || error ? "error" : "success"}
+          message={resolveError ?? error ?? message ?? ""}
+          onClose={() => {
+            setResolveError(null);
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="card-block">
         <h3>待处理举报</h3>
         {reports.length === 0 ? (
@@ -140,7 +150,6 @@ export default function AdminReportsPage() {
               <li key={report.id}>
                 <div>
                   <strong>举报对象：{report.targetType}</strong>
-                  <div className="muted">对象编号：{report.targetId}</div>
                   <div className="muted">原因：{report.reason}</div>
                   {report.attachmentUrl && (
                     <div className="report-attachment">
@@ -181,12 +190,10 @@ export default function AdminReportsPage() {
                 关闭
               </button>
             </div>
-            {resolveError && <div className="status error">{resolveError}</div>}
             <div className="form-stack">
               <div className="report-target">
                 <span>举报对象</span>
                 <strong>{activeReport.targetType}</strong>
-                <span className="muted">{activeReport.targetId}</span>
               </div>
               <label className="inline-field">
                 <span>处理意见</span>

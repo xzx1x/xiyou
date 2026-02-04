@@ -2,6 +2,7 @@ import { createEmailOutbox } from "../repositories/emailOutboxRepository";
 import {
   createNotification,
   listNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
   type NotificationRecord,
 } from "../repositories/notificationRepository";
@@ -65,4 +66,11 @@ export async function markNotificationAsRead(
   notificationId: string,
 ): Promise<void> {
   await markNotificationRead(notificationId, userId);
+}
+
+/**
+ * 标记用户所有通知为已读。
+ */
+export async function markAllNotificationsAsRead(userId: string): Promise<void> {
+  await markAllNotificationsRead(userId);
 }

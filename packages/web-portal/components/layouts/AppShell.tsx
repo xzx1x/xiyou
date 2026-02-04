@@ -24,7 +24,7 @@ type AppShellProps = {
 const COMMON_NAV: NavItem[] = [
   { label: "首页", href: "/" },
   { label: "心理测评", href: "/assessments" },
-  { label: "消息中心", href: "/notifications" },
+  { label: "消息", href: "/notifications" },
   { label: "论坛社区", href: "/forum" },
   { label: "个人主页", href: "/profile" },
 ];
@@ -35,7 +35,6 @@ const USER_NAV: NavItem[] = [
   { label: "预约管理", href: "/appointments" },
   { label: "咨询记录", href: "/consultations" },
   { label: "咨询反馈", href: "/feedback" },
-  { label: "好友与聊天", href: "/chat" },
   { label: "举报中心", href: "/reports" },
   { label: "内容阅读", href: "/articles" },
 ];
@@ -47,7 +46,6 @@ const COUNSELOR_NAV: NavItem[] = [
   { label: "咨询记录", href: "/counselor/records" },
   { label: "满意度反馈", href: "/counselor/feedback" },
   { label: "服务统计", href: "/counselor/stats" },
-  { label: "聊天中心", href: "/chat" },
 ];
 
 // 管理员导航项，用于审核与数据治理。

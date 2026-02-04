@@ -172,7 +172,7 @@ export interface AssessmentQuestion {
 
 // 测评模板结构。
 export interface AssessmentTemplate {
-  type: "PHQ9" | "GAD7";
+  type: "MOOD" | "ANXIETY" | "STRESS" | "SLEEP" | "SOCIAL";
   title: string;
   description: string;
   questions: AssessmentQuestion[];
@@ -182,7 +182,7 @@ export interface AssessmentTemplate {
 export interface AssessmentResult {
   id: string;
   userId: string;
-  type: "PHQ9" | "GAD7";
+  type: "MOOD" | "ANXIETY" | "STRESS" | "SLEEP" | "SOCIAL";
   score: number;
   level: string;
   answers: string;
@@ -217,6 +217,8 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   readAt?: string | null;
+  revokedAt?: string | null;
+  revokedBy?: string | null;
 }
 
 // 好友申请记录结构。
@@ -227,6 +229,7 @@ export interface FriendRequest {
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string;
   updatedAt: string;
+  requesterProfile?: PublicUserProfile | null;
 }
 
 // 好友关系记录结构。
@@ -234,6 +237,7 @@ export interface FriendRecord {
   userId: string;
   friendId: string;
   createdAt: string;
+  profile?: PublicUserProfile | null;
 }
 
 // 论坛帖子结构。
@@ -464,12 +468,20 @@ interface ChatMessageResponse {
   message: ChatMessage;
 }
 
+interface ChatUnreadCountResponse {
+  count: number;
+}
+
 interface FriendRequestListResponse {
   requests: FriendRequest[];
 }
 
 interface FriendListResponse {
   friends: FriendRecord[];
+}
+
+interface FriendSearchResponse {
+  users: PublicUserProfile[];
 }
 
 interface ForumPostCreateResponse {
@@ -980,7 +992,7 @@ export async function listAssessmentTemplates(): Promise<AssessmentTemplate[]> {
  * 提交测评。
  */
 export async function submitAssessmentResult(payload: {
-  type: "PHQ9" | "GAD7";
+  type: "MOOD" | "ANXIETY" | "STRESS" | "SLEEP" | "SOCIAL";
   answers: number[];
 }): Promise<AssessmentSubmitResponse> {
   return request<AssessmentSubmitResponse>("/api/assessments", {
@@ -1040,6 +1052,17 @@ export async function listChatThreads(): Promise<ChatThread[]> {
 }
 
 /**
+ * 获取未读聊天数量。
+ */
+export async function getChatUnreadCount(): Promise<number> {
+  const { count } = await request<ChatUnreadCountResponse>("/api/chat/unread-count", {
+    method: "GET",
+    auth: true,
+  });
+  return count;
+}
+
+/**
  * 创建或获取聊天线程。
  */
 export async function createChatThread(payload: { peerId: string }): Promise<ChatThread> {
@@ -1054,11 +1077,25 @@ export async function createChatThread(payload: { peerId: string }): Promise<Cha
 /**
  * 获取线程消息列表。
  */
-export async function listChatMessages(threadId: string): Promise<ChatMessage[]> {
-  const { messages } = await request<ChatMessageListResponse>(`/api/chat/threads/${threadId}/messages`, {
-    method: "GET",
-    auth: true,
-  });
+export async function listChatMessages(
+  threadId: string,
+  options?: { before?: string; limit?: number },
+): Promise<ChatMessage[]> {
+  const query = new URLSearchParams();
+  if (options?.before) {
+    query.set("before", options.before);
+  }
+  if (options?.limit) {
+    query.set("limit", String(options.limit));
+  }
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const { messages } = await request<ChatMessageListResponse>(
+    `/api/chat/threads/${threadId}/messages${suffix}`,
+    {
+      method: "GET",
+      auth: true,
+    },
+  );
   return messages;
 }
 
@@ -1073,6 +1110,28 @@ export async function sendChatMessage(
     method: "POST",
     auth: true,
     body: JSON.stringify(payload),
+  });
+  return message;
+}
+
+/**
+ * 删除聊天消息（仅自己不可见）。
+ */
+export async function deleteChatMessage(messageId: string): Promise<string> {
+  const { message } = await request<{ message: string }>(`/api/chat/messages/${messageId}/delete`, {
+    method: "POST",
+    auth: true,
+  });
+  return message;
+}
+
+/**
+ * 撤回聊天消息（双方不可见）。
+ */
+export async function revokeChatMessage(messageId: string): Promise<ChatMessage> {
+  const { message } = await request<ChatMessageResponse>(`/api/chat/messages/${messageId}/revoke`, {
+    method: "POST",
+    auth: true,
   });
   return message;
 }
@@ -1135,6 +1194,18 @@ export async function listFriends(): Promise<FriendRecord[]> {
     auth: true,
   });
   return friends;
+}
+
+/**
+ * 根据昵称关键词搜索好友候选人。
+ */
+export async function searchFriendCandidates(keyword: string): Promise<PublicUserProfile[]> {
+  const query = keyword ? `?keyword=${encodeURIComponent(keyword)}` : "";
+  const { users } = await request<FriendSearchResponse>(`/api/friends/search${query}`, {
+    method: "GET",
+    auth: true,
+  });
+  return users;
 }
 
 /**
@@ -1360,6 +1431,17 @@ export async function listNotifications(): Promise<NotificationRecord[]> {
  */
 export async function markNotificationRead(notificationId: string): Promise<string> {
   const { message } = await request<{ message: string }>(`/api/notifications/${notificationId}/read`, {
+    method: "PATCH",
+    auth: true,
+  });
+  return message;
+}
+
+/**
+ * 标记所有通知为已读。
+ */
+export async function markAllNotificationsRead(): Promise<string> {
+  const { message } = await request<{ message: string }>("/api/notifications/read-all", {
     method: "PATCH",
     auth: true,
   });

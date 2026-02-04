@@ -2,10 +2,13 @@ import type { Context } from "koa";
 import { chatMessageSchema, chatThreadSchema } from "../schemas/chatSchema";
 import { isChatParticipant } from "../repositories/chatRepository";
 import {
+  deleteMessageForUser,
   getMessages,
   getOrCreateThread,
   getThreads,
+  getUnreadChatCount,
   markThreadRead,
+  revokeMessage,
   sendMessage,
 } from "../services/chatService";
 import { BadRequestError, UnauthorizedError } from "../utils/errors";
@@ -64,7 +67,15 @@ export async function listChatMessages(ctx: Context) {
   if (!allowed) {
     throw new UnauthorizedError("无权查看该聊天");
   }
-  const messages = await getMessages(threadId);
+  const limit =
+    typeof ctx.query.limit === "string" ? Number.parseInt(ctx.query.limit, 10) : undefined;
+  const beforeRaw = typeof ctx.query.before === "string" ? ctx.query.before : "";
+  const before =
+    beforeRaw && !Number.isNaN(Date.parse(beforeRaw)) ? new Date(beforeRaw) : undefined;
+  const messages = await getMessages(threadId, authUser.sub, {
+    limit: limit && Number.isFinite(limit) ? limit : undefined,
+    before,
+  });
   ctx.status = 200;
   ctx.body = { messages };
 }
@@ -126,4 +137,51 @@ export async function markChatThreadRead(ctx: Context) {
   await markThreadRead(threadId, authUser.sub);
   ctx.status = 200;
   ctx.body = { message: "已标记为已读" };
+}
+
+/**
+ * 获取未读消息数量。
+ */
+export async function getChatUnreadCount(ctx: Context) {
+  const authUser = ctx.state.user as { sub?: string } | undefined;
+  if (!authUser?.sub) {
+    ctx.throw(401, "未授权");
+  }
+  const count = await getUnreadChatCount(authUser.sub);
+  ctx.status = 200;
+  ctx.body = { count };
+}
+
+/**
+ * 删除聊天消息（仅当前用户不可见）。
+ */
+export async function deleteChatMessage(ctx: Context) {
+  const authUser = ctx.state.user as { sub?: string } | undefined;
+  if (!authUser?.sub) {
+    ctx.throw(401, "未授权");
+  }
+  const messageId = ctx.params.id;
+  if (!messageId) {
+    throw new BadRequestError("消息编号不能为空");
+  }
+  await deleteMessageForUser(messageId, authUser.sub);
+  ctx.status = 200;
+  ctx.body = { message: "已删除" };
+}
+
+/**
+ * 撤回聊天消息。
+ */
+export async function revokeChatMessage(ctx: Context) {
+  const authUser = ctx.state.user as { sub?: string } | undefined;
+  if (!authUser?.sub) {
+    ctx.throw(401, "未授权");
+  }
+  const messageId = ctx.params.id;
+  if (!messageId) {
+    throw new BadRequestError("消息编号不能为空");
+  }
+  const message = await revokeMessage(messageId, authUser.sub);
+  ctx.status = 200;
+  ctx.body = { message };
 }

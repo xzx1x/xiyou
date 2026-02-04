@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../components/layouts/AppShell";
+import { CenterToast } from "../../components/ui/CenterToast";
 import { listContentItems, type ContentItem } from "../../lib/api";
 
 /**
@@ -52,7 +53,13 @@ export default function CoursesPage() {
 
   return (
     <AppShell title="心理课程" description="观看心理课程视频与案例分享。">
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast
+          type="error"
+          message={error}
+          onClose={() => setError(null)}
+        />
+      )}
       <div className="card-block">
         {items.length === 0 ? (
           <p className="muted">暂无课程。</p>

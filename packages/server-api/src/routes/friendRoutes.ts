@@ -5,6 +5,7 @@ import {
   listFriendRequests,
   listFriends,
   respondFriendRequestAction,
+  searchFriends,
 } from "../controllers/friendController";
 
 /**
@@ -16,5 +17,6 @@ friendRouter.post("/requests", authenticate, createFriendRequest);
 friendRouter.get("/requests", authenticate, listFriendRequests);
 friendRouter.post("/requests/:id/respond", authenticate, respondFriendRequestAction);
 friendRouter.get("/", authenticate, listFriends);
+friendRouter.get("/search", authenticate, searchFriends);
 
 export default friendRouter;

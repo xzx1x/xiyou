@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { getCounselorStats, type CounselorStats } from "../../../lib/api";
 
 /**
@@ -52,7 +53,13 @@ export default function CounselorStatsPage() {
 
   return (
     <AppShell title="服务统计" requiredRoles={["COUNSELOR"]}>
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast
+          type="error"
+          message={error}
+          onClose={() => setError(null)}
+        />
+      )}
       {stats ? (
         <div className="split-grid">
           <div className="card-block">

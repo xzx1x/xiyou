@@ -1,7 +1,12 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { pool } from "../config/database";
 
-export type AssessmentType = "PHQ9" | "GAD7";
+export type AssessmentType =
+  | "MOOD"
+  | "ANXIETY"
+  | "STRESS"
+  | "SLEEP"
+  | "SOCIAL";
 
 export type AssessmentResultRecord = {
   id: string;

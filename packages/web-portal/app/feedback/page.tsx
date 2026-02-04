@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../components/layouts/AppShell";
-import { listFeedback, submitFeedback, type FeedbackRecord } from "../../lib/api";
+import { CenterToast } from "../../components/ui/CenterToast";
+import {
+  listAppointments,
+  listFeedback,
+  submitFeedback,
+  type Appointment,
+  type FeedbackRecord,
+} from "../../lib/api";
 
 /**
  * 咨询反馈页面：用户提交满意度与查看历史。
@@ -10,6 +17,8 @@ import { listFeedback, submitFeedback, type FeedbackRecord } from "../../lib/api
 export default function FeedbackPage() {
   // 历史反馈列表。
   const [feedbackList, setFeedbackList] = useState<FeedbackRecord[]>([]);
+  // 可选择的预约列表。
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   // 反馈表单数据。
   const [form, setForm] = useState({
     appointmentId: "",
@@ -32,8 +41,12 @@ export default function FeedbackPage() {
       setLoading(true);
       setError(null);
       try {
-        const list = await listFeedback();
+        const [list, appointmentList] = await Promise.all([
+          listFeedback(),
+          listAppointments(),
+        ]);
         setFeedbackList(list);
+        setAppointments(appointmentList);
       } catch (err) {
         setError(err instanceof Error ? err.message : "加载反馈失败");
       } finally {
@@ -59,12 +72,20 @@ export default function FeedbackPage() {
     return () => window.clearTimeout(timer);
   }, [error]);
 
+  const appointmentMap = useMemo(() => {
+    return new Map(appointments.map((item) => [item.id, item]));
+  }, [appointments]);
+
   /**
    * 提交反馈。
    */
   const handleSubmit = async () => {
     setMessage(null);
     setError(null);
+    if (!form.appointmentId) {
+      setError("请选择预约记录");
+      return;
+    }
     try {
       const result = await submitFeedback({
         appointmentId: form.appointmentId,
@@ -73,7 +94,7 @@ export default function FeedbackPage() {
         liked: form.liked,
       });
       setFeedbackList((prev) => [result.feedback, ...prev]);
-      setMessage(`反馈已提交，存证编号：${result.evidence.id}`);
+      setMessage("反馈已提交，已存证");
     } catch (err) {
       setError(err instanceof Error ? err.message : "提交失败");
     }
@@ -89,20 +110,35 @@ export default function FeedbackPage() {
 
   return (
     <AppShell title="咨询反馈" requiredRoles={["USER"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="split-grid">
         <div className="card-block">
           <h3>提交反馈</h3>
           <div className="form-stack">
             <label className="inline-field">
-              <span>预约编号</span>
-              <input
+              <span>预约记录</span>
+              <select
                 value={form.appointmentId}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, appointmentId: event.target.value }))
                 }
-              />
+              >
+                <option value="">请选择预约记录</option>
+                {appointments.map((appointment) => (
+                  <option key={appointment.id} value={appointment.id}>
+                    {`${new Date(appointment.createdAt).toLocaleString("zh-CN")} · ${appointment.status}`}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="inline-field">
               <span>评分</span>
@@ -149,14 +185,20 @@ export default function FeedbackPage() {
             <p className="muted">暂无反馈记录。</p>
           ) : (
             <ul className="list">
-              {feedbackList.map((item) => (
-                <li key={item.id}>
-                  <strong>预约：{item.appointmentId}</strong>
-                  <div>评分：{item.rating} 分</div>
-                  <div className="muted">{item.comment ?? "无文字反馈"}</div>
-                  <small>{new Date(item.createdAt).toLocaleString("zh-CN")}</small>
-                </li>
-              ))}
+              {feedbackList.map((item) => {
+                const appointment = appointmentMap.get(item.appointmentId);
+                const appointmentLabel = appointment
+                  ? `预约时间：${new Date(appointment.createdAt).toLocaleString("zh-CN")}`
+                  : "预约记录";
+                return (
+                  <li key={item.id}>
+                    <strong>{appointmentLabel}</strong>
+                    <div>评分：{item.rating} 分</div>
+                    <div className="muted">{item.comment ?? "无文字反馈"}</div>
+                    <small>{new Date(item.createdAt).toLocaleString("zh-CN")}</small>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

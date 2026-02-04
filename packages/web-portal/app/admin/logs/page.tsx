@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { listRequestLogs } from "../../../lib/api";
 
 /**
@@ -22,6 +23,12 @@ export default function AdminLogsPage() {
   const [loading, setLoading] = useState(true);
   // 错误提示信息。
   const [error, setError] = useState<string | null>(null);
+
+  const maskPath = (path: string) =>
+    path.replace(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      ":id",
+    );
 
   /**
    * 加载日志列表。
@@ -60,7 +67,9 @@ export default function AdminLogsPage() {
 
   return (
     <AppShell title="访问日志" requiredRoles={["ADMIN"]}>
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast type="error" message={error} onClose={() => setError(null)} />
+      )}
       <div className="card-block">
         <h3>最近请求</h3>
         {logs.length === 0 ? (
@@ -70,10 +79,10 @@ export default function AdminLogsPage() {
             {logs.map((log) => (
               <li key={log.id}>
                 <strong>
-                  {log.method} {log.path}
+                  {log.method} {maskPath(log.path)}
                 </strong>
                 <div className="muted">
-                  状态：{log.status} · 耗时：{log.durationMs}ms · 用户：{log.userId ?? "匿名"}
+                  状态：{log.status} · 耗时：{log.durationMs}ms · 用户：{log.userId ? "已登录" : "匿名"}
                 </div>
                 <small>{new Date(log.createdAt).toLocaleString("zh-CN")}</small>
               </li>

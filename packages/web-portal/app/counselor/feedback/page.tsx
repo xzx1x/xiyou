@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { listFeedback, type FeedbackRecord } from "../../../lib/api";
 
 /**
@@ -52,7 +53,13 @@ export default function CounselorFeedbackPage() {
 
   return (
     <AppShell title="满意度反馈" requiredRoles={["COUNSELOR"]}>
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast
+          type="error"
+          message={error}
+          onClose={() => setError(null)}
+        />
+      )}
       <div className="card-block">
         <h3>反馈列表</h3>
         {feedbackList.length === 0 ? (
@@ -61,7 +68,7 @@ export default function CounselorFeedbackPage() {
           <ul className="list">
             {feedbackList.map((item) => (
               <li key={item.id}>
-                <strong>预约：{item.appointmentId}</strong>
+                <strong>反馈时间：{new Date(item.createdAt).toLocaleString("zh-CN")}</strong>
                 <div>评分：{item.rating} 分</div>
                 <div className="muted">{item.comment ?? "无文字反馈"}</div>
               </li>

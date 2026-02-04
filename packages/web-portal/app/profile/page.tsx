@@ -20,6 +20,7 @@ import {
   type ProfileInput,
   type User,
 } from "../../lib/api";
+import { CenterToast } from "../../components/ui/CenterToast";
 
 // 资料表单的初始值，确保表单可控。
 const DEFAULT_PROFILE_FORM: ProfileInput = {
@@ -140,6 +141,26 @@ export default function ProfilePage() {
     }
     return resolveAvatarUrl(profile?.avatarUrl);
   }, [avatarPreview, profile?.avatarUrl]);
+
+  const toast = loadError
+    ? { type: "error" as const, message: loadError, onClose: () => setLoadError(null) }
+    : profileError
+      ? { type: "error" as const, message: profileError, onClose: () => setProfileError(null) }
+      : avatarError
+        ? { type: "error" as const, message: avatarError, onClose: () => setAvatarError(null) }
+        : passwordError
+          ? { type: "error" as const, message: passwordError, onClose: () => setPasswordError(null) }
+          : profileMessage
+            ? { type: "success" as const, message: profileMessage, onClose: () => setProfileMessage(null) }
+            : avatarMessage
+              ? { type: "success" as const, message: avatarMessage, onClose: () => setAvatarMessage(null) }
+              : passwordMessage
+                ? {
+                    type: "success" as const,
+                    message: passwordMessage,
+                    onClose: () => setPasswordMessage(null),
+                  }
+                : null;
 
   /**
    * 更新资料表单状态。
@@ -309,6 +330,7 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-shell">
+      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
       <header className="profile-header">
         <div>
           <p className="eyebrow">个人主页</p>
@@ -331,10 +353,6 @@ export default function ProfilePage() {
         <section className="profile-card">
           <p className="profile-hint">正在加载资料……</p>
         </section>
-      ) : loadError ? (
-        <section className="profile-card">
-          <p className="status error">{loadError}</p>
-        </section>
       ) : null}
 
       <section className="profile-card">
@@ -348,10 +366,6 @@ export default function ProfilePage() {
           <div>
             <span>账号邮箱</span>
             <strong>{profile?.email ?? "-"}</strong>
-          </div>
-          <div>
-            <span>身份编号</span>
-            <strong>{profile?.identityCode ?? "-"}</strong>
           </div>
           <div>
             <span>当前角色</span>
@@ -396,8 +410,6 @@ export default function ProfilePage() {
             <p className="profile-hint">
               仅支持 PNG/JPEG/WEBP，大小不超过 2MB。
             </p>
-            {avatarMessage && <p className="notice">{avatarMessage}</p>}
-            {avatarError && <p className="status error">{avatarError}</p>}
           </div>
         </div>
       </section>
@@ -464,8 +476,6 @@ export default function ProfilePage() {
             >
               修改密码
             </button>
-            {profileMessage && <div className="notice">{profileMessage}</div>}
-            {profileError && <div className="status error">{profileError}</div>}
           </div>
         </form>
       </section>
@@ -536,8 +546,6 @@ export default function ProfilePage() {
                 >
                   取消
                 </button>
-                {passwordMessage && <div className="notice">{passwordMessage}</div>}
-                {passwordError && <div className="status error">{passwordError}</div>}
               </div>
             </form>
           </div>

@@ -1,16 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import { AppShell } from "../../components/layouts/AppShell";
+import { CenterToast } from "../../components/ui/CenterToast";
 import {
   createForumPost,
+  createReport,
+  getProfile,
   listForumPosts,
+  listFriends,
   requestFriend,
   resolveAvatarUrl,
+  type FriendRecord,
   type ForumPost,
   type PublicUserProfile,
 } from "../../lib/api";
+
+const REPORT_ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+const MAX_REPORT_BYTES = 2 * 1024 * 1024;
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("读取文件失败"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(new Error("读取文件失败"));
+    reader.readAsDataURL(file);
+  });
 
 /**
  * 论坛首页：展示帖子与发布入口。
@@ -23,6 +46,8 @@ export default function ForumPage() {
     title: "",
     content: "",
   });
+  // 好友列表数据。
+  const [friends, setFriends] = useState<FriendRecord[]>([]);
   // 页面加载状态。
   const [loading, setLoading] = useState(true);
   // 操作反馈提示。
@@ -37,10 +62,28 @@ export default function ForumPage() {
   const [friendLoading, setFriendLoading] = useState(false);
   const [friendMessage, setFriendMessage] = useState<string | null>(null);
   const [friendError, setFriendError] = useState<string | null>(null);
+  // 举报弹窗。
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{
+    type: "USER" | "COUNSELOR";
+    id: string;
+    label: string;
+    displayName: string;
+  } | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportAttachment, setReportAttachment] = useState<{
+    name: string;
+    dataUrl: string;
+  } | null>(null);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  // 当前用户编号。
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const messageTimerRef = useRef<number | null>(null);
   const errorTimerRef = useRef<number | null>(null);
   const friendMessageTimerRef = useRef<number | null>(null);
   const friendErrorTimerRef = useRef<number | null>(null);
+  const reportErrorTimerRef = useRef<number | null>(null);
 
   /**
    * 加载帖子列表。
@@ -50,8 +93,14 @@ export default function ForumPage() {
       setLoading(true);
       setError(null);
       try {
-        const list = await listForumPosts();
+        const [list, friendList, profile] = await Promise.all([
+          listForumPosts(),
+          listFriends(),
+          getProfile(),
+        ]);
         setPosts(list);
+        setFriends(friendList);
+        setCurrentUserId(profile.id);
       } catch (err) {
         showError(err instanceof Error ? err.message : "加载帖子失败");
       } finally {
@@ -74,6 +123,9 @@ export default function ForumPage() {
       }
       if (friendErrorTimerRef.current !== null) {
         window.clearTimeout(friendErrorTimerRef.current);
+      }
+      if (reportErrorTimerRef.current !== null) {
+        window.clearTimeout(reportErrorTimerRef.current);
       }
     };
   }, []);
@@ -118,6 +170,25 @@ export default function ForumPage() {
     }, 3000);
   };
 
+  const clearReportError = () => {
+    setReportError(null);
+    if (reportErrorTimerRef.current !== null) {
+      window.clearTimeout(reportErrorTimerRef.current);
+      reportErrorTimerRef.current = null;
+    }
+  };
+
+  const showReportError = (text: string) => {
+    setReportError(text);
+    if (reportErrorTimerRef.current !== null) {
+      window.clearTimeout(reportErrorTimerRef.current);
+    }
+    reportErrorTimerRef.current = window.setTimeout(() => {
+      setReportError(null);
+      reportErrorTimerRef.current = null;
+    }, 3000);
+  };
+
   const openCreateModal = () => {
     setCreateModalOpen(true);
   };
@@ -138,7 +209,7 @@ export default function ForumPage() {
         content: form.content,
       });
       setPosts((prev) => [result.post, ...prev]);
-      showMessage(`帖子已提交，存证编号：${result.evidence.id}`);
+      showMessage("帖子已提交，已存证");
       setForm({ title: "", content: "" });
       closeCreateModal();
     } catch (err) {
@@ -156,8 +227,31 @@ export default function ForumPage() {
     setAuthorModalOpen(true);
   };
 
+  const openReportModal = (author: PublicUserProfile) => {
+    const targetType = author.role === "COUNSELOR" ? "COUNSELOR" : "USER";
+    const displayName = author.nickname || "用户";
+    setReportTarget({
+      type: targetType,
+      id: author.id,
+      label: "用户",
+      displayName,
+    });
+    setReportReason("");
+    setReportAttachment(null);
+    clearReportError();
+    setReportModalOpen(true);
+  };
+
   const closeAuthorModal = () => {
     setAuthorModalOpen(false);
+  };
+
+  const closeReportModal = () => {
+    setReportModalOpen(false);
+    setReportTarget(null);
+    setReportReason("");
+    setReportAttachment(null);
+    clearReportError();
   };
 
   const handleCreateModalOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -172,8 +266,69 @@ export default function ForumPage() {
     }
   };
 
+  const handleReportModalOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      closeReportModal();
+    }
+  };
+
+  const handleReportAttachmentChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setReportAttachment(null);
+      return;
+    }
+    clearReportError();
+    if (!REPORT_ALLOWED_TYPES.has(file.type)) {
+      showReportError("仅支持 PNG/JPEG/WEBP 图片");
+      return;
+    }
+    if (file.size > MAX_REPORT_BYTES) {
+      showReportError("图片大小不能超过 2MB");
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setReportAttachment({ name: file.name, dataUrl });
+    } catch (err) {
+      showReportError(err instanceof Error ? err.message : "读取图片失败");
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportTarget) {
+      showReportError("未找到举报对象");
+      return;
+    }
+    if (!reportReason.trim()) {
+      showReportError("请输入文字说明");
+      return;
+    }
+    clearReportError();
+    setReportSubmitting(true);
+    try {
+      const result = await createReport({
+        targetType: reportTarget.type,
+        targetId: reportTarget.id,
+        reason: reportReason,
+        attachmentDataUrl: reportAttachment?.dataUrl,
+      });
+      showMessage("举报已提交，等待管理员审核");
+      closeReportModal();
+    } catch (err) {
+      showReportError(err instanceof Error ? err.message : "举报提交失败");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   const handleRequestFriend = async () => {
     if (!activeAuthor) {
+      return;
+    }
+    if (friends.some((friend) => friend.friendId === activeAuthor.id)) {
       return;
     }
     setFriendLoading(true);
@@ -187,6 +342,14 @@ export default function ForumPage() {
     } finally {
       setFriendLoading(false);
     }
+  };
+
+  const handleReportAuthor = () => {
+    if (!activeAuthor) {
+      return;
+    }
+    closeAuthorModal();
+    openReportModal(activeAuthor);
   };
 
   const formatRole = (role: PublicUserProfile["role"]) => {
@@ -218,10 +381,24 @@ export default function ForumPage() {
     );
   }
 
+  const isSelf = !!activeAuthor && activeAuthor.id === currentUserId;
+  const isFriend =
+    !!activeAuthor && friends.some((friend) => friend.friendId === activeAuthor.id);
+  const toast = reportError
+    ? { type: "error" as const, message: reportError, onClose: () => setReportError(null) }
+    : friendError
+      ? { type: "error" as const, message: friendError, onClose: () => setFriendError(null) }
+      : error
+        ? { type: "error" as const, message: error, onClose: () => setError(null) }
+        : friendMessage
+          ? { type: "success" as const, message: friendMessage, onClose: () => setFriendMessage(null) }
+          : message
+            ? { type: "success" as const, message, onClose: () => setMessage(null) }
+            : null;
+
   return (
     <AppShell title="论坛社区" description="发帖需要先审核后发布。">
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
       <div className="forum-toolbar">
         <button className="btn btn-secondary" type="button" onClick={openCreateModal}>
           📝 发布帖子
@@ -379,17 +556,81 @@ export default function ForumPage() {
                 <strong>{formatRole(activeAuthor.role)}</strong>
               </div>
             </div>
-            <div className="button-row">
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={handleRequestFriend}
-                disabled={friendLoading}
-              >
-                ➕ 添加好友
+            {!isSelf && (
+              <div className="button-row">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleRequestFriend}
+                  disabled={friendLoading || isFriend}
+                >
+                  {isFriend ? "已是好友" : "➕ 添加好友"}
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={handleReportAuthor}>
+                  🚩 举报
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {reportModalOpen && reportTarget && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-modal-title"
+          onClick={handleReportModalOverlayClick}
+        >
+          <div className="modal-card">
+            <div className="modal-header">
+              <h3 id="report-modal-title">提交举报</h3>
+              <button className="btn btn-secondary" type="button" onClick={closeReportModal}>
+                关闭
               </button>
-              {friendMessage && <div className="notice">{friendMessage}</div>}
-              {friendError && <div className="status error">{friendError}</div>}
+            </div>
+            <div className="form-stack">
+              <div className="report-target">
+                <span>举报对象</span>
+                <strong>{reportTarget.label}</strong>
+                <span className="muted">{reportTarget.displayName}</span>
+              </div>
+              <label className="inline-field">
+                <span>提交图片（可选）</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleReportAttachmentChange}
+                />
+              </label>
+              <span className="muted report-modal-note">可选，仅支持 PNG/JPEG/WEBP，且大小不超过 2MB。</span>
+              {reportAttachment && (
+                <div className="report-attachment-preview">
+                  <img src={reportAttachment.dataUrl} alt="举报图片预览" />
+                  <span className="muted">{reportAttachment.name}</span>
+                </div>
+              )}
+              <label className="inline-field">
+                <span>文字说明</span>
+                <textarea
+                  value={reportReason}
+                  onChange={(event) => setReportReason(event.target.value)}
+                  placeholder="请描述举报原因"
+                />
+              </label>
+              <div className="button-row">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleReportSubmit}
+                  disabled={reportSubmitting}
+                >
+                  {reportSubmitting ? "提交中..." : "提交举报"}
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={closeReportModal}>
+                  取消
+                </button>
+              </div>
             </div>
           </div>
         </div>

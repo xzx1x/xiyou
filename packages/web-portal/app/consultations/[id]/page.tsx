@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { getConsultationDetail, type ConsultationRecord } from "../../../lib/api";
 
 /**
@@ -59,7 +60,9 @@ export default function ConsultationDetailPage() {
 
   return (
     <AppShell title="记录详情" requiredRoles={["USER"]}>
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast type="error" message={error} onClose={() => setError(null)} />
+      )}
       {record ? (
         <div className="card-block">
           <h3>咨询摘要</h3>

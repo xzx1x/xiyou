@@ -60,6 +60,16 @@ export async function markNotificationRead(
 }
 
 /**
+ * 将用户所有未读通知标记为已读。
+ */
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  await pool.execute<ResultSetHeader>(
+    "UPDATE notifications SET read_at = ? WHERE user_id = ? AND read_at IS NULL",
+    [new Date(), userId],
+  );
+}
+
+/**
  * 查询指定用户的通知列表。
  */
 export async function listNotifications(

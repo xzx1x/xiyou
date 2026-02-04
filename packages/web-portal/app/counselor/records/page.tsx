@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import {
   createConsultation,
+  listAppointments,
   listConsultations,
   updateConsultation,
+  type Appointment,
   type ConsultationRecord,
 } from "../../../lib/api";
 
@@ -15,6 +18,8 @@ import {
 export default function CounselorRecordsPage() {
   // 咨询记录列表数据。
   const [records, setRecords] = useState<ConsultationRecord[]>([]);
+  // 预约列表数据。
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   // 新建咨询记录表单。
   const [createForm, setCreateForm] = useState({
     appointmentId: "",
@@ -52,8 +57,12 @@ export default function CounselorRecordsPage() {
       setLoading(true);
       setError(null);
       try {
-        const list = await listConsultations();
+        const [list, appointmentList] = await Promise.all([
+          listConsultations(),
+          listAppointments(),
+        ]);
         setRecords(list);
+        setAppointments(appointmentList);
       } catch (err) {
         setError(err instanceof Error ? err.message : "加载记录失败");
       } finally {
@@ -85,6 +94,10 @@ export default function CounselorRecordsPage() {
   const handleCreate = async () => {
     setMessage(null);
     setError(null);
+    if (!createForm.appointmentId) {
+      setError("请选择预约记录");
+      return;
+    }
     try {
       const result = await createConsultation({
         appointmentId: createForm.appointmentId,
@@ -97,7 +110,7 @@ export default function CounselorRecordsPage() {
         isCrisis: createForm.isCrisis,
       });
       setRecords((prev) => [result.record, ...prev]);
-      setMessage(`记录已创建，存证编号：${result.evidence.id}`);
+      setMessage("记录已创建，已存证");
     } catch (err) {
       setError(err instanceof Error ? err.message : "创建失败");
     }
@@ -108,7 +121,7 @@ export default function CounselorRecordsPage() {
    */
   const handleUpdate = async () => {
     if (!updateForm.recordId) {
-      setError("请输入记录编号");
+      setError("请选择记录");
       return;
     }
     setMessage(null);
@@ -142,20 +155,35 @@ export default function CounselorRecordsPage() {
 
   return (
     <AppShell title="咨询记录" requiredRoles={["COUNSELOR"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="split-grid">
         <div className="card-block">
           <h3>创建记录</h3>
           <div className="form-stack">
             <label className="inline-field">
-              <span>预约编号</span>
-              <input
+              <span>预约记录</span>
+              <select
                 value={createForm.appointmentId}
                 onChange={(event) =>
                   setCreateForm((prev) => ({ ...prev, appointmentId: event.target.value }))
                 }
-              />
+              >
+                <option value="">请选择预约记录</option>
+                {appointments.map((appointment) => (
+                  <option key={appointment.id} value={appointment.id}>
+                    {`${new Date(appointment.createdAt).toLocaleString("zh-CN")} · ${appointment.status}`}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="inline-field">
               <span>会话摘要</span>
@@ -221,13 +249,20 @@ export default function CounselorRecordsPage() {
           <h3>更新记录</h3>
           <div className="form-stack">
             <label className="inline-field">
-              <span>记录编号</span>
-              <input
+              <span>咨询记录</span>
+              <select
                 value={updateForm.recordId}
                 onChange={(event) =>
                   setUpdateForm((prev) => ({ ...prev, recordId: event.target.value }))
                 }
-              />
+              >
+                <option value="">请选择咨询记录</option>
+                {records.map((record) => (
+                  <option key={record.id} value={record.id}>
+                    {`${new Date(record.createdAt).toLocaleString("zh-CN")} · ${record.issueCategory ?? "未分类"}`}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="inline-field">
               <span>会话摘要</span>
@@ -298,8 +333,7 @@ export default function CounselorRecordsPage() {
           <ul className="list">
             {records.map((record) => (
               <li key={record.id}>
-                <strong>{record.id}</strong>
-                <div className="muted">预约：{record.appointmentId}</div>
+                <strong>记录时间：{new Date(record.createdAt).toLocaleString("zh-CN")}</strong>
                 <div className="muted">问题分类：{record.issueCategory ?? "-"}</div>
               </li>
             ))}

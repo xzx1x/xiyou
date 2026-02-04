@@ -6,8 +6,47 @@ import {
   listFriends,
   updateFriendRequestStatus,
 } from "../repositories/friendRepository";
+import {
+  listUsersByIds,
+  searchUsersByKeyword,
+  type UserRecord,
+  type UserRole,
+} from "../repositories/userRepository";
 import { BadRequestError } from "../utils/errors";
 import { notifyInApp } from "./notificationService";
+
+export type PublicFriendProfile = {
+  id: string;
+  nickname: string | null;
+  gender: string | null;
+  major: string | null;
+  grade: string | null;
+  avatarUrl: string | null;
+  role: UserRole;
+};
+
+// 好友申请列表项，附带申请人公开信息。
+export type FriendRequestWithProfile = {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  createdAt: Date;
+  updatedAt: Date;
+  requesterProfile: PublicFriendProfile | null;
+};
+
+function toPublicProfile(user: UserRecord): PublicFriendProfile {
+  return {
+    id: user.id,
+    nickname: user.nickname,
+    gender: user.gender,
+    major: user.major,
+    grade: user.grade,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+  };
+}
 
 /**
  * 发起好友申请。
@@ -33,7 +72,17 @@ export async function requestFriend(
  * 获取好友申请列表。
  */
 export async function getFriendRequests(userId: string) {
-  return listFriendRequests(userId);
+  const requests = await listFriendRequests(userId);
+  if (requests.length === 0) {
+    return [];
+  }
+  const requesterIds = Array.from(new Set(requests.map((request) => request.requesterId)));
+  const users = await listUsersByIds(requesterIds);
+  const profileMap = new Map(users.map((user) => [user.id, toPublicProfile(user)]));
+  return requests.map((request) => ({
+    ...request,
+    requesterProfile: profileMap.get(request.requesterId) ?? null,
+  }));
 }
 
 /**
@@ -64,5 +113,34 @@ export async function respondFriendRequest(
  * 获取好友列表。
  */
 export async function getFriends(userId: string) {
-  return listFriends(userId);
+  const friends = await listFriends(userId);
+  if (friends.length === 0) {
+    return [];
+  }
+  const friendIds = friends.map((friend) => friend.friendId);
+  const users = await listUsersByIds(friendIds);
+  const profileMap = new Map(users.map((user) => [user.id, toPublicProfile(user)]));
+  return friends.map((friend) => ({
+    ...friend,
+    profile: profileMap.get(friend.friendId) ?? null,
+  }));
+}
+
+/**
+ * 根据关键词搜索可添加好友的用户。
+ */
+export async function searchFriendCandidates(
+  userId: string,
+  keyword: string,
+) {
+  const trimmed = keyword.trim();
+  if (!trimmed) {
+    return [];
+  }
+  const users = await searchUsersByKeyword(trimmed);
+  const friends = await listFriends(userId);
+  const friendIdSet = new Set(friends.map((friend) => friend.friendId));
+  return users
+    .filter((user) => user.id !== userId && !friendIdSet.has(user.id))
+    .map(toPublicProfile);
 }

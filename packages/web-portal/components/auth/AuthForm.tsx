@@ -8,6 +8,7 @@ import {
   type LoginPayload,
   type RegisterPayload,
 } from "../../lib/api";
+import { CenterToast } from "../ui/CenterToast";
 
 interface Props {
   mode: "login" | "register";
@@ -30,6 +31,11 @@ export function AuthForm({ mode }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const toast = errorMessage
+    ? { type: "error" as const, message: errorMessage, onClose: () => setErrorMessage(null) }
+    : successMessage
+      ? { type: "success" as const, message: successMessage, onClose: () => setSuccessMessage(null) }
+      : null;
 
   /**
    * 统一处理输入变更，确保 state 与 UI 同步。
@@ -142,16 +148,7 @@ export function AuthForm({ mode }: Props) {
         {isSubmitting ? "提交中..." : mode === "register" ? "注册" : "登录"}
       </button>
 
-      {successMessage && (
-        <div className="notice" role="status">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="status error" role="alert">
-          {errorMessage}
-        </div>
-      )}
+      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
     </form>
   );
 }

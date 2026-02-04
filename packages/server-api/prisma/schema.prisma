@@ -39,8 +39,11 @@ enum AppointmentStatus {
 }
 
 enum AssessmentType {
-  PHQ9
-  GAD7
+  MOOD
+  ANXIETY
+  STRESS
+  SLEEP
+  SOCIAL
 }
 
 enum ContentType {
@@ -261,8 +264,19 @@ model ChatMessage {
   content   String
   createdAt DateTime @default(now()) @map("created_at")
   readAt    DateTime? @map("read_at")
+  revokedAt DateTime? @map("revoked_at")
+  revokedBy String?  @map("revoked_by")
 
   @@map("chat_messages")
+}
+
+model ChatMessageDeletion {
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([messageId, userId])
+  @@map("chat_message_deletions")
 }
 
 model FriendRequest {

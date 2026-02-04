@@ -14,7 +14,7 @@ const quickActions = [
   },
   {
     title: "心理测评",
-    description: "PHQ-9、GAD-7 等心理量表，分数与建议即刻可见。",
+    description: "情绪、焦虑、压力、睡眠、社交等测评，分数与建议即刻可见。",
     badge: "测评",
     icon: "📊",
     accent: "#c084fc",
@@ -34,8 +34,8 @@ const quickActions = [
     accent: "#f472b6",
   },
   {
-    title: "消息中心",
-    description: "预约提醒、心理师回复、系统公告多渠道统一呈现。",
+    title: "消息",
+    description: "系统提醒、好友聊天、申请处理集中在这里。",
     badge: "通知",
     icon: "✉️",
     accent: "#4ade80",
@@ -93,7 +93,7 @@ const notifications = [
   {
     title: "测评报告生成",
     time: "上午 09:12",
-    message: "PHQ-9 分数 8 分，当前属于轻度抑郁，可根据建议调整作息。",
+    message: "情绪测评得分 24 分，当前属于轻度波动，可根据建议调整作息。",
   },
   {
     title: "论坛热帖：初心人的夜晚",
@@ -105,13 +105,13 @@ const notifications = [
 // 测评结果亮点展示。
 const evaluationHighlights = [
   {
-    label: "PHQ-9",
-    value: "8 分 · 轻度抑郁",
+    label: "情绪状态",
+    value: "24 分 · 轻度波动",
     description: "建议继续保持作息规律，并记录每日情绪。",
   },
   {
-    label: "GAD-7",
-    value: "6 分 · 轻度焦虑",
+    label: "压力负荷",
+    value: "28 分 · 轻度压力",
     description: "可尝试呼吸练习与正念，心理师将在下一次会话中推进。",
   },
   {
@@ -215,7 +215,7 @@ export default function HomePage() {
         <div className="panel-heading">
           <div>
             <h2>最新消息预览</h2>
-            <p>消息中心将统一展示预约结果、提醒与公告</p>
+            <p>消息模块统一展示预约结果、提醒与公告</p>
           </div>
           <Link href="/notifications" className="ghost-btn small">
             查看全部

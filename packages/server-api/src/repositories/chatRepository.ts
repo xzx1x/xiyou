@@ -15,6 +15,8 @@ export type ChatMessageRecord = {
   content: string;
   createdAt: Date;
   readAt: Date | null;
+  revokedAt: Date | null;
+  revokedBy: string | null;
 };
 
 /**
@@ -87,21 +89,59 @@ export async function listChatThreads(
 /**
  * 查询线程消息列表。
  */
-export async function listChatMessages(
+export async function listChatMessagesForUser(
   threadId: string,
+  userId: string,
+  options?: { before?: Date; limit?: number },
 ): Promise<ChatMessageRecord[]> {
+  const limit =
+    typeof options?.limit === "number" && Number.isFinite(options.limit) && options.limit > 0
+      ? Math.min(Math.floor(options.limit), 50)
+      : undefined;
+  const params: Array<string | Date | number> = [userId, threadId];
+  if (options?.before) {
+    params.push(options.before);
+  }
+  const limitClause = limit ? ` LIMIT ${limit}` : "";
   const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT * FROM chat_messages WHERE thread_id = ? ORDER BY created_at ASC",
-    [threadId],
+    `SELECT m.*
+     FROM chat_messages m
+     LEFT JOIN chat_message_deletions d
+       ON m.id = d.message_id AND d.user_id = ?
+     WHERE m.thread_id = ? AND d.message_id IS NULL${options?.before ? " AND m.created_at < ?" : ""}
+     ORDER BY m.created_at DESC${limitClause}`,
+    params,
   );
-  return rows.map(mapChatMessage);
+  const messages = rows.map(mapChatMessage);
+  return messages.reverse();
+}
+
+/**
+ * 统计用户未读消息数量（排除自己发送）。
+ */
+export async function countUnreadMessages(userId: string): Promise<number> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT COUNT(*) AS count
+     FROM chat_messages m
+     INNER JOIN chat_participants p ON m.thread_id = p.thread_id
+     LEFT JOIN chat_message_deletions d
+       ON m.id = d.message_id AND d.user_id = ?
+     WHERE p.user_id = ?
+       AND m.sender_id <> ?
+       AND m.read_at IS NULL
+       AND m.revoked_at IS NULL
+       AND d.message_id IS NULL`,
+    [userId, userId, userId],
+  );
+  const countValue = rows[0]?.count ?? 0;
+  return Number(countValue);
 }
 
 /**
  * 写入一条聊天消息，并同步线程最后活跃时间。
  */
 export async function createChatMessage(
-  payload: Omit<ChatMessageRecord, "createdAt" | "readAt">,
+  payload: Omit<ChatMessageRecord, "createdAt" | "readAt" | "revokedAt" | "revokedBy">,
 ): Promise<ChatMessageRecord> {
   const createdAt = new Date();
   await pool.execute<ResultSetHeader>(
@@ -116,7 +156,53 @@ export async function createChatMessage(
     ...payload,
     createdAt,
     readAt: null,
+    revokedAt: null,
+    revokedBy: null,
   };
+}
+
+/**
+ * 根据消息编号读取消息。
+ */
+export async function findChatMessageById(
+  messageId: string,
+): Promise<ChatMessageRecord | null> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT * FROM chat_messages WHERE id = ? LIMIT 1",
+    [messageId],
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  return mapChatMessage(rows[0]!);
+}
+
+/**
+ * 标记消息为撤回。
+ */
+export async function markChatMessageRevoked(
+  messageId: string,
+  userId: string,
+): Promise<ChatMessageRecord | null> {
+  const revokedAt = new Date();
+  await pool.execute<ResultSetHeader>(
+    "UPDATE chat_messages SET revoked_at = ?, revoked_by = ? WHERE id = ? AND revoked_at IS NULL",
+    [revokedAt, userId, messageId],
+  );
+  return findChatMessageById(messageId);
+}
+
+/**
+ * 记录消息删除（仅对当前用户隐藏）。
+ */
+export async function createChatMessageDeletion(
+  messageId: string,
+  userId: string,
+): Promise<void> {
+  await pool.execute<ResultSetHeader>(
+    "INSERT IGNORE INTO chat_message_deletions (message_id, user_id, created_at) VALUES (?, ?, ?)",
+    [messageId, userId, new Date()],
+  );
 }
 
 /**
@@ -171,5 +257,7 @@ function mapChatMessage(row: RowDataPacket): ChatMessageRecord {
     content: row.content,
     createdAt: new Date(row.created_at),
     readAt: row.read_at ? new Date(row.read_at) : null,
+    revokedAt: row.revoked_at ? new Date(row.revoked_at) : null,
+    revokedBy: row.revoked_by ?? null,
   };
 }

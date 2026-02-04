@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../components/layouts/AppShell";
+import { CenterToast } from "../../components/ui/CenterToast";
 import { listContentItems, type ContentItem } from "../../lib/api";
 
 /**
@@ -52,7 +53,9 @@ export default function QaPage() {
 
   return (
     <AppShell title="问答公告" description="查看心理中心最新公告与常见问题。">
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast type="error" message={error} onClose={() => setError(null)} />
+      )}
       <div className="card-block">
         {items.length === 0 ? (
           <p className="muted">暂无公告。</p>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../components/layouts/AppShell";
+import { CenterToast } from "../../components/ui/CenterToast";
 import {
   applyCounselor,
   createAppointment,
@@ -121,7 +122,7 @@ export default function CounselorsPage() {
         scheduleId,
         userNote: userNote || undefined,
       });
-      setMessage(`预约成功，存证编号：${result.evidence.id}`);
+      setMessage("预约成功，已存证");
     } catch (err) {
       setError(err instanceof Error ? err.message : "预约失败");
     }
@@ -140,7 +141,7 @@ export default function CounselorsPage() {
         attachmentUrls: applyForm.attachmentUrls || undefined,
       });
       setApplication(result.application ?? null);
-      setMessage(`申请已提交，存证编号：${result.evidence?.id ?? "-"}`);
+      setMessage("申请已提交，已存证");
     } catch (err) {
       setError(err instanceof Error ? err.message : "申请失败");
     }
@@ -156,8 +157,16 @@ export default function CounselorsPage() {
 
   return (
     <AppShell title="心理咨询师">
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="split-grid">
         <div className="card-block">
           <h3>心理师列表</h3>

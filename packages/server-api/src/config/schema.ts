@@ -11,6 +11,11 @@ const USER_COLUMNS: Array<{ name: string; definition: string }> = [
   { name: "disabled_reason", definition: "VARCHAR(255) NULL" },
   { name: "last_login_at", definition: "DATETIME NULL" },
 ];
+// 需要补齐的 chat_messages 表字段，避免旧库缺列。
+const CHAT_MESSAGE_COLUMNS: Array<{ name: string; definition: string }> = [
+  { name: "revoked_at", definition: "DATETIME NULL" },
+  { name: "revoked_by", definition: "VARCHAR(36) NULL" },
+];
 
 // information_schema 查询的返回结构。
 type ColumnNameRow = RowDataPacket & { columnName: string };
@@ -34,6 +39,7 @@ export async function ensureDatabaseSchema(
   await createAssessmentTables(connection, collation);
   await createFeedbackTables(connection, collation);
   await createChatTables(connection, collation);
+  await ensureChatMessageColumns(connection, databaseName);
   await createFriendTables(connection, collation);
   await createForumTables(connection, collation);
   await createReportTables(connection, collation);
@@ -207,7 +213,7 @@ async function createAssessmentTables(
     CREATE TABLE IF NOT EXISTS assessment_results (
       id VARCHAR(36) NOT NULL PRIMARY KEY,
       user_id VARCHAR(36) NOT NULL,
-      type ENUM('PHQ9', 'GAD7') NOT NULL,
+      type ENUM('MOOD', 'ANXIETY', 'STRESS', 'SLEEP', 'SOCIAL') NOT NULL,
       score INT NOT NULL,
       level VARCHAR(50) NOT NULL,
       answers TEXT NOT NULL,
@@ -275,8 +281,20 @@ async function createChatTables(
       content TEXT NOT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       read_at DATETIME NULL,
+      revoked_at DATETIME NULL,
+      revoked_by VARCHAR(36) NULL,
       KEY idx_chat_thread (thread_id),
       KEY idx_chat_sender (sender_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
+  `);
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS chat_message_deletions (
+      message_id VARCHAR(36) NOT NULL,
+      user_id VARCHAR(36) NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id, user_id),
+      KEY idx_chat_message_delete_user (user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
   `);
 }
@@ -573,4 +591,27 @@ async function ensureUserIndexes(
   await connection.query(
     "ALTER TABLE users ADD UNIQUE KEY idx_users_nickname (nickname)",
   );
+}
+
+/**
+ * 补齐 chat_messages 表缺失字段，防止旧库查询失败。
+ */
+async function ensureChatMessageColumns(
+  connection: mysql.Connection,
+  databaseName: string,
+): Promise<void> {
+  const [rows] = await connection.query<ColumnNameRow[]>(
+    `SELECT COLUMN_NAME AS columnName
+     FROM information_schema.columns
+     WHERE table_schema = ? AND table_name = 'chat_messages'`,
+    [databaseName],
+  );
+  const existing = new Set(rows.map((row) => row.columnName));
+  for (const column of CHAT_MESSAGE_COLUMNS) {
+    if (!existing.has(column.name)) {
+      await connection.query(
+        `ALTER TABLE chat_messages ADD COLUMN ${column.name} ${column.definition}`,
+      );
+    }
+  }
 }

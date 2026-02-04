@@ -3,15 +3,19 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import { useParams } from "next/navigation";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import {
   createForumComment,
   createReport,
+  getProfile,
   getForumPostDetail,
   likePost,
   listForumComments,
+  listFriends,
   unlikePost,
   requestFriend,
   resolveAvatarUrl,
+  type FriendRecord,
   type ForumComment,
   type ForumPost,
   type PublicUserProfile,
@@ -46,6 +50,8 @@ export default function ForumDetailPage() {
   const [post, setPost] = useState<ForumPost | null>(null);
   // 评论列表数据。
   const [comments, setComments] = useState<ForumComment[]>([]);
+  // 好友列表数据。
+  const [friends, setFriends] = useState<FriendRecord[]>([]);
   // 评论输入内容。
   const [commentText, setCommentText] = useState("");
   // 回复输入内容。
@@ -69,6 +75,7 @@ export default function ForumDetailPage() {
     type: "POST" | "COMMENT" | "USER" | "COUNSELOR";
     id: string;
     label: string;
+    displayName: string;
   } | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [reportAttachment, setReportAttachment] = useState<{
@@ -84,6 +91,7 @@ export default function ForumDetailPage() {
   const [friendLoading, setFriendLoading] = useState(false);
   const [friendMessage, setFriendMessage] = useState<string | null>(null);
   const [friendError, setFriendError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const commentTimerRef = useRef<number | null>(null);
   const messageTimerRef = useRef<number | null>(null);
   const errorTimerRef = useRef<number | null>(null);
@@ -103,12 +111,16 @@ export default function ForumDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const [postDetail, commentList] = await Promise.all([
+        const [postDetail, commentList, friendList, profile] = await Promise.all([
           getForumPostDetail(postId),
           listForumComments(postId),
+          listFriends(),
+          getProfile(),
         ]);
         setPost(postDetail);
         setComments(commentList);
+        setFriends(friendList);
+        setCurrentUserId(profile.id);
       } catch (err) {
         showError(err instanceof Error ? err.message : "加载帖子失败");
       } finally {
@@ -215,6 +227,7 @@ export default function ForumDetailPage() {
     type: "POST" | "COMMENT" | "USER" | "COUNSELOR";
     id: string;
     label: string;
+    displayName: string;
   }) => {
     setReportTarget(target);
     setReportReason("");
@@ -280,7 +293,7 @@ export default function ForumDetailPage() {
         reason: reportReason,
         attachmentDataUrl: reportAttachment?.dataUrl,
       });
-      showMessage(`举报已提交，存证编号：${result.evidence.id}`);
+      showMessage("举报已提交，等待管理员审核");
       closeReportModal();
     } catch (err) {
       showReportError(err instanceof Error ? err.message : "举报提交失败");
@@ -381,7 +394,12 @@ export default function ForumDetailPage() {
     if (!postId) {
       return;
     }
-    openReportModal({ type: "POST", id: postId, label: "帖子" });
+    openReportModal({
+      type: "POST",
+      id: postId,
+      label: "帖子",
+      displayName: post?.title || "帖子",
+    });
   };
 
   const openAuthorModal = (author: PublicUserProfile | null | undefined) => {
@@ -408,6 +426,9 @@ export default function ForumDetailPage() {
     if (!activeAuthor) {
       return;
     }
+    if (friends.some((friend) => friend.friendId === activeAuthor.id)) {
+      return;
+    }
     setFriendLoading(true);
     setFriendMessage(null);
     setFriendError(null);
@@ -425,12 +446,17 @@ export default function ForumDetailPage() {
     if (!activeAuthor) {
       return;
     }
+    if (activeAuthor.id === currentUserId) {
+      return;
+    }
     const targetType = activeAuthor.role === "COUNSELOR" ? "COUNSELOR" : "USER";
+    const displayName = activeAuthor.nickname || "用户";
     closeAuthorModal();
     openReportModal({
       type: targetType,
       id: activeAuthor.id,
-      label: targetType === "COUNSELOR" ? "心理师" : "用户",
+      label: "用户",
+      displayName,
     });
   };
 
@@ -498,11 +524,26 @@ export default function ForumDetailPage() {
     ? "匿名发布"
     : [author?.major, author?.grade].filter(Boolean).join(" · ") || "校园用户";
   const postPublishedAt = post ? formatDateTime(post.createdAt) : "";
+  const isSelf = !!activeAuthor && activeAuthor.id === currentUserId;
+  const isFriend =
+    !!activeAuthor && friends.some((friend) => friend.friendId === activeAuthor.id);
+  const toast = reportError
+    ? { type: "error" as const, message: reportError, onClose: () => setReportError(null) }
+    : friendError
+      ? { type: "error" as const, message: friendError, onClose: () => setFriendError(null) }
+      : error
+        ? { type: "error" as const, message: error, onClose: () => setError(null) }
+        : friendMessage
+          ? { type: "success" as const, message: friendMessage, onClose: () => setFriendMessage(null) }
+          : commentMessage
+            ? { type: "success" as const, message: commentMessage, onClose: () => setCommentMessage(null) }
+            : message
+              ? { type: "success" as const, message, onClose: () => setMessage(null) }
+              : null;
 
   return (
     <AppShell title="帖子详情">
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
       {post ? (
         <div className="card-block">
           <div className="post-detail-header">
@@ -693,11 +734,6 @@ export default function ForumDetailPage() {
                   <button className="btn btn-primary small" type="button" onClick={handleComment}>
                     💬 发布评论
                   </button>
-                  {commentMessage && (
-                    <div className="status" role="status">
-                      {commentMessage}
-                    </div>
-                  )}
                 </div>
               </>
             )}
@@ -721,12 +757,11 @@ export default function ForumDetailPage() {
                 关闭
               </button>
             </div>
-            {reportError && <div className="status error">{reportError}</div>}
             <div className="form-stack">
               <div className="report-target">
                 <span>举报对象</span>
                 <strong>{reportTarget.label}</strong>
-                <span className="muted">{reportTarget.id}</span>
+                <span className="muted">{reportTarget.displayName}</span>
               </div>
               <label className="inline-field">
                 <span>提交图片（可选）</span>
@@ -819,21 +854,21 @@ export default function ForumDetailPage() {
                 <strong>{formatRole(activeAuthor.role)}</strong>
               </div>
             </div>
-            <div className="button-row">
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={handleRequestFriend}
-                disabled={friendLoading}
-              >
-                ➕ 添加好友
-              </button>
-              <button className="btn btn-secondary" type="button" onClick={handleReportAuthor}>
-                🚩 举报
-              </button>
-              {friendMessage && <div className="notice">{friendMessage}</div>}
-              {friendError && <div className="status error">{friendError}</div>}
-            </div>
+            {!isSelf && (
+              <div className="button-row">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleRequestFriend}
+                  disabled={friendLoading || isFriend}
+                >
+                  {isFriend ? "已是好友" : "➕ 添加好友"}
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={handleReportAuthor}>
+                  🚩 举报
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

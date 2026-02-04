@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { confirmPasswordReset, requestPasswordReset } from "../../lib/api";
+import { CenterToast } from "../../components/ui/CenterToast";
 
 /**
  * 密码重置页：支持邮箱申请与验证码确认。
@@ -26,6 +27,23 @@ export default function ResetPasswordPage() {
   const [requesting, setRequesting] = useState(false);
   // 确认阶段加载状态。
   const [confirming, setConfirming] = useState(false);
+  const toast = requestError
+    ? { type: "error" as const, message: requestError, onClose: () => setRequestError(null) }
+    : confirmError
+      ? { type: "error" as const, message: confirmError, onClose: () => setConfirmError(null) }
+      : requestMessage
+        ? {
+            type: "success" as const,
+            message: requestMessage,
+            onClose: () => setRequestMessage(null),
+          }
+        : confirmMessage
+          ? {
+              type: "success" as const,
+              message: confirmMessage,
+              onClose: () => setConfirmMessage(null),
+            }
+          : null;
 
   /**
    * 提交邮箱申请重置验证码。
@@ -68,6 +86,7 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="page-shell">
+      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
       <section className="card">
         <h1>重置密码</h1>
         <p>请输入 QQ 邮箱获取验证码，再使用验证码设置新密码。</p>
@@ -86,16 +105,6 @@ export default function ResetPasswordPage() {
           <button className="btn btn-primary" disabled={requesting} type="submit">
             {requesting ? "发送中..." : "发送验证码"}
           </button>
-          {requestMessage && (
-            <div className="notice" role="status">
-              {requestMessage}
-            </div>
-          )}
-          {requestError && (
-            <div className="status error" role="alert">
-              {requestError}
-            </div>
-          )}
         </form>
         <hr className="divider" />
         <form className="auth-form" onSubmit={handleConfirmSubmit}>
@@ -124,16 +133,6 @@ export default function ResetPasswordPage() {
           <button className="btn btn-secondary" disabled={confirming} type="submit">
             {confirming ? "重置中..." : "确认重置"}
           </button>
-          {confirmMessage && (
-            <div className="notice" role="status">
-              {confirmMessage}
-            </div>
-          )}
-          {confirmError && (
-            <div className="status error" role="alert">
-              {confirmError}
-            </div>
-          )}
         </form>
         <p className="hint">
           已想起密码？<Link href="/login">返回登录</Link>

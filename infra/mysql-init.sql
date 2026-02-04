@@ -153,8 +153,18 @@ CREATE TABLE IF NOT EXISTS `chat_messages` (
   `content` TEXT NOT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `read_at` DATETIME NULL,
+  `revoked_at` DATETIME NULL,
+  `revoked_by` VARCHAR(36) NULL,
   KEY `idx_chat_thread` (`thread_id`),
   KEY `idx_chat_sender` (`sender_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `chat_message_deletions` (
+  `message_id` VARCHAR(36) NOT NULL,
+  `user_id` VARCHAR(36) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`message_id`, `user_id`),
+  KEY `idx_chat_message_delete_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `friend_requests` (

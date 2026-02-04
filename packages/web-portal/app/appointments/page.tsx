@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../../components/layouts/AppShell";
+import { CenterToast } from "../../components/ui/CenterToast";
 import { cancelAppointment, listAppointments, type Appointment } from "../../lib/api";
 
 /**
@@ -84,8 +85,16 @@ export default function AppointmentsPage() {
 
   return (
     <AppShell title="预约管理" requiredRoles={["USER"]}>
-      {error && <div className="status error">{error}</div>}
-      {message && <div className="status">{message}</div>}
+      {(error || message) && (
+        <CenterToast
+          type={error ? "error" : "success"}
+          message={error ?? message ?? ""}
+          onClose={() => {
+            setError(null);
+            setMessage(null);
+          }}
+        />
+      )}
       <div className="card-block">
         <h3>我的预约</h3>
         {appointments.length === 0 ? (
@@ -95,8 +104,7 @@ export default function AppointmentsPage() {
             {appointments.map((appointment) => (
               <li key={appointment.id}>
                 <div>
-                  <strong>预约编号：{appointment.id}</strong>
-                  <div className="muted">状态：{appointment.status}</div>
+                  <strong>预约状态：{appointment.status}</strong>
                   <small>创建时间：{new Date(appointment.createdAt).toLocaleString("zh-CN")}</small>
                 </div>
                 <div className="button-row">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../../components/layouts/AppShell";
+import { CenterToast } from "../../components/ui/CenterToast";
 import { listConsultations, type ConsultationRecord } from "../../lib/api";
 
 /**
@@ -53,7 +54,9 @@ export default function ConsultationsPage() {
 
   return (
     <AppShell title="咨询记录" requiredRoles={["USER"]}>
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast type="error" message={error} onClose={() => setError(null)} />
+      )}
       <div className="card-block">
         <h3>历史记录</h3>
         {records.length === 0 ? (
@@ -63,9 +66,8 @@ export default function ConsultationsPage() {
             {records.map((record) => (
               <li key={record.id}>
                 <div>
-                  <strong>记录编号：{record.id}</strong>
+                  <strong>记录时间：{new Date(record.createdAt).toLocaleString("zh-CN")}</strong>
                   <div className="muted">问题分类：{record.issueCategory ?? "-"}</div>
-                  <small>创建时间：{new Date(record.createdAt).toLocaleString("zh-CN")}</small>
                 </div>
                 <Link className="btn btn-secondary" href={`/consultations/${record.id}`}>
                   查看详情

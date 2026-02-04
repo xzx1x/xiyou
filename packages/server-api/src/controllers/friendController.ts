@@ -5,6 +5,7 @@ import {
   getFriends,
   requestFriend,
   respondFriendRequest,
+  searchFriendCandidates,
 } from "../services/friendService";
 import { BadRequestError } from "../utils/errors";
 
@@ -78,4 +79,18 @@ export async function listFriends(ctx: Context) {
   const friends = await getFriends(authUser.sub);
   ctx.status = 200;
   ctx.body = { friends };
+}
+
+/**
+ * 根据昵称关键词搜索用户。
+ */
+export async function searchFriends(ctx: Context) {
+  const authUser = ctx.state.user as { sub?: string } | undefined;
+  if (!authUser?.sub) {
+    ctx.throw(401, "未授权");
+  }
+  const keyword = typeof ctx.query.keyword === "string" ? ctx.query.keyword : "";
+  const users = await searchFriendCandidates(authUser.sub, keyword);
+  ctx.status = 200;
+  ctx.body = { users };
 }

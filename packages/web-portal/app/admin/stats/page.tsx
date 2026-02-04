@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
+import { CenterToast } from "../../../components/ui/CenterToast";
 import { getAdminStats, type AdminStats } from "../../../lib/api";
 
 /**
@@ -52,7 +53,9 @@ export default function AdminStatsPage() {
 
   return (
     <AppShell title="统计报表" requiredRoles={["ADMIN"]}>
-      {error && <div className="status error">{error}</div>}
+      {error && (
+        <CenterToast type="error" message={error} onClose={() => setError(null)} />
+      )}
       {stats ? (
         <div className="split-grid">
           <div className="card-block">
