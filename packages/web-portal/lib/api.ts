@@ -84,6 +84,7 @@ export interface CounselorApplication {
   qualifications?: string | null;
   motivation?: string | null;
   attachmentUrls?: string | null;
+  applicantProfile?: PublicUserProfile | null;
   reviewReason?: string | null;
   reviewedBy?: string | null;
   reviewedAt?: string | null;
@@ -282,22 +283,6 @@ export interface ReportRecord {
   resolvedBy?: string | null;
   resolvedAt?: string | null;
   createdAt: string;
-}
-
-// 内容条目结构。
-export interface ContentItem {
-  id: string;
-  type: "ARTICLE" | "VIDEO" | "NOTICE";
-  title: string;
-  summary?: string | null;
-  content?: string | null;
-  coverUrl?: string | null;
-  status: "DRAFT" | "PUBLISHED";
-  createdBy: string;
-  updatedBy?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt?: string | null;
 }
 
 // 通知记录结构。
@@ -514,19 +499,6 @@ interface ReportListResponse {
   reports: ReportRecord[];
 }
 
-interface ContentCreateResponse {
-  item: ContentItem;
-  evidence: EvidenceRecord;
-}
-
-interface ContentListResponse {
-  items: ContentItem[];
-}
-
-interface ContentDetailResponse {
-  item: ContentItem;
-}
-
 interface NotificationListResponse {
   notifications: NotificationRecord[];
 }
@@ -710,6 +682,7 @@ export async function applyCounselor(payload: {
   qualifications?: string;
   motivation?: string;
   attachmentUrls?: string;
+  attachmentDataUrl?: string;
 }): Promise<CounselorApplicationResponse> {
   return request<CounselorApplicationResponse>("/api/counselors/apply", {
     method: "POST",
@@ -773,17 +746,24 @@ export async function updateCounselorProfile(payload: {
  * 创建心理师档期。
  */
 export async function createCounselorSchedule(payload: {
+  type?: "SHORT" | "LONG";
+  date?: string;
   startTime: string;
   endTime: string;
+  repeat?: "ALL" | "WEEKDAY" | "CUSTOM";
+  daysOfWeek?: number[];
   mode: "ONLINE" | "OFFLINE";
   location?: string;
-}): Promise<CounselorSchedule> {
-  const { schedule } = await request<{ schedule: CounselorSchedule }>("/api/counselors/schedules", {
-    method: "POST",
-    auth: true,
-    body: JSON.stringify(payload),
-  });
-  return schedule;
+}): Promise<CounselorSchedule[]> {
+  const { schedules } = await request<{ schedules: CounselorSchedule[] }>(
+    "/api/counselors/schedules",
+    {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(payload),
+    },
+  );
+  return schedules;
 }
 
 /**
@@ -1350,69 +1330,6 @@ export async function resolveReport(
     body: JSON.stringify(payload),
   });
   return message;
-}
-
-/**
- * 获取内容列表。
- */
-export async function listContentItems(status?: "DRAFT" | "PUBLISHED"): Promise<ContentItem[]> {
-  const query = status ? `?status=${status}` : "";
-  const { items } = await request<ContentListResponse>(`/api/content${query}`, {
-    method: "GET",
-    auth: true,
-  });
-  return items;
-}
-
-/**
- * 获取内容详情。
- */
-export async function getContentItemDetail(contentId: string): Promise<ContentItem> {
-  const { item } = await request<ContentDetailResponse>(`/api/content/${contentId}`, {
-    method: "GET",
-    auth: true,
-  });
-  return item;
-}
-
-/**
- * 创建内容条目。
- */
-export async function createContentItem(payload: {
-  type: "ARTICLE" | "VIDEO" | "NOTICE";
-  title: string;
-  summary?: string;
-  content?: string;
-  coverUrl?: string;
-  status?: "DRAFT" | "PUBLISHED";
-}): Promise<ContentCreateResponse> {
-  return request<ContentCreateResponse>("/api/content", {
-    method: "POST",
-    auth: true,
-    body: JSON.stringify(payload),
-  });
-}
-
-/**
- * 更新内容条目。
- */
-export async function updateContentItem(
-  contentId: string,
-  payload: {
-    type?: "ARTICLE" | "VIDEO" | "NOTICE";
-    title?: string;
-    summary?: string;
-    content?: string;
-    coverUrl?: string;
-    status?: "DRAFT" | "PUBLISHED";
-  },
-): Promise<ContentItem> {
-  const { item } = await request<ContentDetailResponse>(`/api/content/${contentId}`, {
-    method: "PATCH",
-    auth: true,
-    body: JSON.stringify(payload),
-  });
-  return item;
 }
 
 /**

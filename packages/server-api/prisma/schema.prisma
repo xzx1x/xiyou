@@ -46,17 +46,6 @@ enum AssessmentType {
   SOCIAL
 }
 
-enum ContentType {
-  ARTICLE
-  VIDEO
-  NOTICE
-}
-
-enum ContentStatus {
-  DRAFT
-  PUBLISHED
-}
-
 enum ForumPostStatus {
   PENDING
   APPROVED
@@ -360,23 +349,6 @@ model EvidenceRecord {
   createdAt DateTime           @default(now()) @map("created_at")
 
   @@map("evidence_records")
-}
-
-model ContentItem {
-  id          String       @id @default(cuid())
-  type        ContentType
-  title       String
-  summary     String?
-  content     String?
-  coverUrl    String?      @map("cover_url")
-  status      ContentStatus @default(DRAFT)
-  createdBy   String       @map("created_by")
-  updatedBy   String?      @map("updated_by")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  publishedAt DateTime?    @map("published_at")
-
-  @@map("content_items")
 }
 
 model Notification {

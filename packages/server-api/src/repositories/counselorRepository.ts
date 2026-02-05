@@ -272,6 +272,7 @@ export async function listCounselorSchedules(
   counselorId: string,
   status?: ScheduleStatus,
 ): Promise<CounselorScheduleRecord[]> {
+  await clearExpiredAvailableSchedules(counselorId, new Date());
   const [rows] = await pool.execute<RowDataPacket[]>(
     status
       ? "SELECT * FROM counselor_schedules WHERE counselor_id = ? AND status = ? ORDER BY start_time ASC"
@@ -329,11 +330,23 @@ export async function markScheduleBooked(id: string): Promise<void> {
 export async function listAvailableSchedules(
   counselorId: string,
 ): Promise<CounselorScheduleRecord[]> {
+  const now = new Date();
+  await clearExpiredAvailableSchedules(counselorId, now);
   const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT * FROM counselor_schedules WHERE counselor_id = ? AND status = 'AVAILABLE' ORDER BY start_time ASC",
-    [counselorId],
+    "SELECT * FROM counselor_schedules WHERE counselor_id = ? AND status = 'AVAILABLE' AND start_time >= ? ORDER BY start_time ASC",
+    [counselorId, now],
   );
   return rows.map(mapCounselorSchedule);
+}
+
+export async function clearExpiredAvailableSchedules(
+  counselorId: string,
+  now: Date,
+): Promise<void> {
+  await pool.execute<ResultSetHeader>(
+    "DELETE FROM counselor_schedules WHERE counselor_id = ? AND status = 'AVAILABLE' AND end_time < ?",
+    [counselorId, now],
+  );
 }
 
 function mapCounselorApplication(row: RowDataPacket): CounselorApplicationRecord {

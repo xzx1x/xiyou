@@ -40,7 +40,11 @@ export async function errorHandler(ctx: Context, next: Next): Promise<void> {
     if (status >= 500) {
       console.error(`[${requestLabel}] Internal error:`, error);
     } else if (!isProduction) {
-      console.warn(`[${requestLabel}] Request error:`, err.message, err.details);
+      if (err.details) {
+        console.warn(`[${requestLabel}] Request error:`, err.message, err.details);
+      } else {
+        console.warn(`[${requestLabel}] Request error:`, err.message);
+      }
     }
   }
 }

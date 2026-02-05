@@ -138,15 +138,17 @@ export function AuthForm({ mode }: Props) {
               onChange={(event) => handleChange("nickname", event.target.value)}
             />
           </label>
-          <p className="hint">
-            系统会根据后台白名单自动识别身份；未在白名单内的编号会被拒绝注册。
-          </p>
         </>
       )}
 
       <button className="btn btn-primary" disabled={isSubmitting} type="submit">
         {isSubmitting ? "提交中..." : mode === "register" ? "注册" : "登录"}
       </button>
+      {mode === "register" ? (
+        <p className="hint spaced">
+          系统会根据后台白名单自动识别身份；未在白名单内的编号会被拒绝注册。
+        </p>
+      ) : null}
 
       {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
     </form>

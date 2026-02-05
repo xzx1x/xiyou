@@ -11,6 +11,9 @@ const ALLOWED_AVATAR_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 // 举报附件目录与允许扩展名。
 const REPORT_ATTACHMENT_ROOT = resolve(process.cwd(), "uploads", "reports");
 const ALLOWED_REPORT_ATTACHMENT_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+// 心理师申请附件目录与允许扩展名。
+const COUNSELOR_ATTACHMENT_ROOT = resolve(process.cwd(), "uploads", "counselor-applications");
+const ALLOWED_COUNSELOR_ATTACHMENT_EXT = new Set([".pdf", ".docx"]);
 
 /**
  * 判断请求的文件名是否为安全的文件名（仅允许字母数字与常见符号）。
@@ -74,6 +77,33 @@ staticRouter.get("/uploads/reports/:fileName", async (ctx) => {
   }
   const filePath = resolve(join(REPORT_ATTACHMENT_ROOT, fileName));
   if (!isPathWithinRoot(REPORT_ATTACHMENT_ROOT, filePath)) {
+    throw new BadRequestError("非法文件路径");
+  }
+  const stats = await stat(filePath).catch(() => null);
+  if (!stats || !stats.isFile()) {
+    ctx.status = 404;
+    return;
+  }
+  ctx.type = extension;
+  ctx.set("Cache-Control", "public, max-age=3600");
+  ctx.body = createReadStream(filePath);
+});
+
+/**
+ * 心理师申请附件读取接口，前端可通过 /uploads/counselor-applications/:fileName 访问。
+ */
+staticRouter.get("/uploads/counselor-applications/:fileName", async (ctx) => {
+  const fileName = ctx.params.fileName;
+  if (!fileName || !isSafeFileName(fileName)) {
+    throw new BadRequestError("非法文件名");
+  }
+  const extension = extname(fileName).toLowerCase();
+  if (!ALLOWED_COUNSELOR_ATTACHMENT_EXT.has(extension)) {
+    ctx.status = 404;
+    return;
+  }
+  const filePath = resolve(join(COUNSELOR_ATTACHMENT_ROOT, fileName));
+  if (!isPathWithinRoot(COUNSELOR_ATTACHMENT_ROOT, filePath)) {
     throw new BadRequestError("非法文件路径");
   }
   const stats = await stat(filePath).catch(() => null);

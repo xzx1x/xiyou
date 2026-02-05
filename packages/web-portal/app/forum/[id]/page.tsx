@@ -855,7 +855,7 @@ export default function ForumDetailPage() {
               </div>
             </div>
             {!isSelf && (
-              <div className="button-row">
+              <div className="button-row profile-actions">
                 <button
                   className="btn btn-primary"
                   type="button"

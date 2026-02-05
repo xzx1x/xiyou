@@ -152,6 +152,6 @@ export async function resolveReportAction(
     report.reporterId,
     "举报处理完成",
     "你的举报已处理完毕，感谢你的反馈。",
-    "/reports",
+    "/notifications",
   );
 }

@@ -44,7 +44,6 @@ export async function ensureDatabaseSchema(
   await createForumTables(connection, collation);
   await createReportTables(connection, collation);
   await createEvidenceTables(connection, collation);
-  await createContentTables(connection, collation);
   await createNotificationTables(connection, collation);
   await createPasswordResetTables(connection, collation);
   await createLogTables(connection, collation);
@@ -416,33 +415,6 @@ async function createEvidenceTables(
       status ENUM('PENDING', 'RECORDED') NOT NULL DEFAULT 'PENDING',
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       KEY idx_evidence_target (target_type, target_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
-  `);
-}
-
-/**
- * 内容/资源管理表。
- */
-async function createContentTables(
-  connection: mysql.Connection,
-  collation: string,
-) {
-  await connection.query(`
-    CREATE TABLE IF NOT EXISTS content_items (
-      id VARCHAR(36) NOT NULL PRIMARY KEY,
-      type ENUM('ARTICLE', 'VIDEO', 'NOTICE') NOT NULL,
-      title VARCHAR(200) NOT NULL,
-      summary TEXT NULL,
-      content TEXT NULL,
-      cover_url VARCHAR(255) NULL,
-      status ENUM('DRAFT', 'PUBLISHED') NOT NULL DEFAULT 'DRAFT',
-      created_by VARCHAR(36) NOT NULL,
-      updated_by VARCHAR(36) NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      published_at DATETIME NULL,
-      KEY idx_content_type (type),
-      KEY idx_content_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
   `);
 }

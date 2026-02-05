@@ -6,7 +6,9 @@ import { CenterToast } from "../../../components/ui/CenterToast";
 import {
   listCounselorApplications,
   reviewCounselorApplication,
+  resolveAvatarUrl,
   type CounselorApplication,
+  type PublicUserProfile,
 } from "../../../lib/api";
 
 /**
@@ -25,10 +27,26 @@ export default function AdminCounselorApplicationsPage() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   // 当前正在处理的申请。
   const [activeApplication, setActiveApplication] = useState<CounselorApplication | null>(null);
+  // 用户信息弹窗状态。
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [activeProfile, setActiveProfile] = useState<PublicUserProfile | null>(null);
   // 拒绝原因输入。
   const [rejectReason, setRejectReason] = useState("");
   // 拒绝提交状态。
   const [rejectSubmitting, setRejectSubmitting] = useState(false);
+  const parseAttachmentUrls = (attachmentUrls?: string | null) => {
+    if (!attachmentUrls) {
+      return [];
+    }
+    if (attachmentUrls.startsWith("data:")) {
+      return [attachmentUrls];
+    }
+    return attachmentUrls
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .map((item) => resolveAvatarUrl(item));
+  };
 
   /**
    * 加载申请列表。
@@ -37,7 +55,7 @@ export default function AdminCounselorApplicationsPage() {
     setLoading(true);
     setError(null);
     try {
-      const list = await listCounselorApplications("PENDING");
+      const list = await listCounselorApplications();
       setApplications(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载申请失败");
@@ -93,6 +111,35 @@ export default function AdminCounselorApplicationsPage() {
     if (event.target === event.currentTarget) {
       closeRejectModal();
     }
+  };
+
+  const openProfileModal = (profile: PublicUserProfile | null | undefined) => {
+    if (!profile) {
+      return;
+    }
+    setActiveProfile(profile);
+    setProfileModalOpen(true);
+  };
+
+  const closeProfileModal = () => {
+    setProfileModalOpen(false);
+    setActiveProfile(null);
+  };
+
+  const handleProfileModalOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      closeProfileModal();
+    }
+  };
+
+  const formatRole = (role: PublicUserProfile["role"]) => {
+    if (role === "ADMIN") {
+      return "管理员";
+    }
+    if (role === "COUNSELOR") {
+      return "心理咨询师";
+    }
+    return "学生";
   };
 
   /**
@@ -158,31 +205,94 @@ export default function AdminCounselorApplicationsPage() {
         />
       )}
       <div className="card-block">
-        <h3>待审核申请</h3>
+        <h3>申请记录</h3>
         {applications.length === 0 ? (
-          <p className="muted">暂无待审核申请。</p>
+          <p className="muted">暂无申请记录。</p>
         ) : (
           <ul className="list">
-            {applications.map((application) => (
+            {applications.map((application) => {
+              const isPending = application.status === "PENDING";
+              const statusLabel =
+                application.status === "APPROVED"
+                  ? "已同意"
+                  : application.status === "REJECTED"
+                    ? "已拒绝"
+                    : "待审核";
+              return (
               <li key={application.id}>
                 <div>
-                  <strong>申请人：用户</strong>
+                  <div className="applicant-summary">
+                    <img
+                      className="message-avatar"
+                      src={
+                        resolveAvatarUrl(application.applicantProfile?.avatarUrl) ||
+                        "/default-avatar.svg"
+                      }
+                      alt={`${application.applicantProfile?.nickname ?? "用户"}头像`}
+                      onClick={() => openProfileModal(application.applicantProfile ?? null)}
+                      onError={(event) => {
+                        const target = event.currentTarget;
+                        if (!target.src.endsWith("/default-avatar.svg")) {
+                          target.src = "/default-avatar.svg";
+                        }
+                      }}
+                    />
+                    <div className="message-list-meta">
+                      <strong>
+                        申请人：{application.applicantProfile?.nickname ?? "未设置昵称"}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="muted">状态：{statusLabel}</div>
                   <div className="muted">
                     申请时间：{new Date(application.createdAt).toLocaleString("zh-CN")}
                   </div>
-                  <div className="muted">资质：{application.qualifications ?? "未填写"}</div>
-                  <div className="muted">动机：{application.motivation ?? "未填写"}</div>
+                  <div className="muted">
+                    为什么要当心理师：{application.qualifications ?? "未填写"}
+                  </div>
+                  <div className="muted">
+                    遇到危机情况应该怎么做：{application.motivation ?? "未填写"}
+                  </div>
+                  <div className="muted">
+                    附件：
+                    {parseAttachmentUrls(application.attachmentUrls).length === 0 ? (
+                      "未上传"
+                    ) : (
+                      <div className="button-row">
+                        {parseAttachmentUrls(application.attachmentUrls).map((url, index) => (
+                          <a
+                            key={`${application.id}-attachment-${index}`}
+                            className="btn btn-secondary small"
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            查看附件 {index + 1}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="button-row">
-                  <button className="btn btn-secondary" onClick={() => handleApprove(application.id)}>
-                    通过
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => openRejectModal(application)}>
-                    拒绝
-                  </button>
-                </div>
+                {isPending ? (
+                  <div className="button-row">
+                    <button className="btn btn-secondary" onClick={() => handleApprove(application.id)}>
+                      通过
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => openRejectModal(application)}>
+                      拒绝
+                    </button>
+                  </div>
+                ) : (
+                  <div className="button-row">
+                    <button className="btn btn-secondary" type="button" disabled>
+                      {statusLabel}
+                    </button>
+                  </div>
+                )}
               </li>
-            ))}
+            );
+            })}
           </ul>
         )}
       </div>
@@ -204,7 +314,29 @@ export default function AdminCounselorApplicationsPage() {
             <div className="form-stack">
               <div className="report-target">
                 <span>申请人</span>
-                <strong>用户</strong>
+                <strong>
+                  {activeApplication?.applicantProfile?.nickname ?? "未设置昵称"}
+                </strong>
+              </div>
+              <div className="report-target">
+                <span>附件</span>
+                {parseAttachmentUrls(activeApplication.attachmentUrls).length === 0 ? (
+                  <strong>未上传</strong>
+                ) : (
+                  <div className="button-row">
+                    {parseAttachmentUrls(activeApplication.attachmentUrls).map((url, index) => (
+                      <a
+                        key={`${activeApplication.id}-modal-attachment-${index}`}
+                        className="btn btn-secondary small"
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        查看附件 {index + 1}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
               <label className="inline-field">
                 <span>拒绝原因</span>
@@ -226,6 +358,60 @@ export default function AdminCounselorApplicationsPage() {
                 <button className="btn btn-secondary" type="button" onClick={closeRejectModal}>
                   取消
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {profileModalOpen && activeProfile && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-modal-title"
+          onClick={handleProfileModalOverlayClick}
+        >
+          <div className="modal-card">
+            <div className="modal-header">
+              <h3 id="profile-modal-title">用户信息</h3>
+              <button className="btn btn-secondary" type="button" onClick={closeProfileModal}>
+                关闭
+              </button>
+            </div>
+            <div className="author-summary">
+              <div className="author-avatar">
+                <img
+                  src={resolveAvatarUrl(activeProfile.avatarUrl) || "/default-avatar.svg"}
+                  alt={`${activeProfile.nickname ?? "用户"}头像`}
+                  onError={(event) => {
+                    const target = event.currentTarget;
+                    if (!target.src.endsWith("/default-avatar.svg")) {
+                      target.src = "/default-avatar.svg";
+                    }
+                  }}
+                />
+              </div>
+              <div className="author-summary-meta">
+                <strong>{activeProfile.nickname ?? "未设置昵称"}</strong>
+                <span className="muted">{formatRole(activeProfile.role)}</span>
+              </div>
+            </div>
+            <div className="account-meta">
+              <div>
+                <span>性别</span>
+                <strong>{activeProfile.gender ?? "未填写"}</strong>
+              </div>
+              <div>
+                <span>专业</span>
+                <strong>{activeProfile.major ?? "未填写"}</strong>
+              </div>
+              <div>
+                <span>年级</span>
+                <strong>{activeProfile.grade ?? "未填写"}</strong>
+              </div>
+              <div>
+                <span>身份</span>
+                <strong>{formatRole(activeProfile.role)}</strong>
               </div>
             </div>
           </div>

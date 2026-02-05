@@ -143,6 +143,18 @@ export default function NotificationsPage() {
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
 
+  const scrollChatToBottom = () => {
+    const container = chatBodyRef.current;
+    if (!container) {
+      return;
+    }
+    const scroll = () => {
+      container.scrollTop = container.scrollHeight;
+    };
+    scroll();
+    window.requestAnimationFrame(scroll);
+  };
+
   /**
    * 初始化加载通知、好友、好友申请与用户信息。
    */
@@ -229,13 +241,16 @@ export default function NotificationsPage() {
     if (!shouldScrollToBottomRef.current) {
       return;
     }
+    if (chatLoading) {
+      return;
+    }
     const container = chatBodyRef.current;
     if (!container) {
       return;
     }
     shouldScrollToBottomRef.current = false;
-    container.scrollTop = container.scrollHeight;
-  }, [activeTab, chatMessages]);
+    scrollChatToBottom();
+  }, [activeTab, chatLoading, chatMessages]);
 
   useEffect(() => {
     if (scrollAdjustRef.current === null) {
@@ -274,7 +289,7 @@ export default function NotificationsPage() {
     if (container.scrollHeight <= container.clientHeight + 4 && hasMoreMessages) {
       return;
     }
-    container.scrollTop = container.scrollHeight;
+    scrollChatToBottom();
     initialScrollRef.current = false;
   }, [
     activeTab,
@@ -1470,7 +1485,7 @@ export default function NotificationsPage() {
               </div>
             </div>
             {!isSelf && (
-              <div className="button-row">
+              <div className="button-row profile-actions">
                 <button
                   className="btn btn-primary"
                   type="button"

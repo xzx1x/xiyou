@@ -134,7 +134,7 @@ export default function ResetPasswordPage() {
             {confirming ? "重置中..." : "确认重置"}
           </button>
         </form>
-        <p className="hint">
+        <p className="hint spaced">
           已想起密码？<Link href="/login">返回登录</Link>
         </p>
       </section>

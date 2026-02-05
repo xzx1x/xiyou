@@ -5,6 +5,7 @@ export const counselorApplicationSchema = z.object({
   qualifications: z.string().max(2000).optional(),
   motivation: z.string().max(2000).optional(),
   attachmentUrls: z.string().max(2000).optional(),
+  attachmentDataUrl: z.string().optional(),
 });
 
 // 心理师档案更新信息校验。
@@ -17,12 +18,36 @@ export const counselorProfileSchema = z.object({
 });
 
 // 新增档期时的时间与地点校验。
-export const counselorScheduleSchema = z.object({
-  startTime: z.coerce.date(),
-  endTime: z.coerce.date(),
+const counselorScheduleBaseSchema = z.object({
   mode: z.enum(["ONLINE", "OFFLINE"]),
   location: z.string().max(255).optional(),
 });
+
+const counselorShortScheduleSchema = counselorScheduleBaseSchema.extend({
+  type: z.literal("SHORT"),
+  date: z.string().min(1),
+  startTime: z.string().min(1),
+  endTime: z.string().min(1),
+});
+
+const counselorLongScheduleSchema = counselorScheduleBaseSchema.extend({
+  type: z.literal("LONG"),
+  startTime: z.string().min(1),
+  endTime: z.string().min(1),
+  repeat: z.enum(["ALL", "WEEKDAY", "CUSTOM"]),
+  daysOfWeek: z.array(z.number().int().min(1).max(7)).optional(),
+});
+
+const counselorLegacyScheduleSchema = counselorScheduleBaseSchema.extend({
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
+});
+
+export const counselorScheduleSchema = z.union([
+  counselorShortScheduleSchema,
+  counselorLongScheduleSchema,
+  counselorLegacyScheduleSchema,
+]);
 
 // 档期取消时的原因校验。
 export const counselorScheduleCancelSchema = z.object({

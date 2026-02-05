@@ -33,6 +33,10 @@ export async function bookAppointment(
   if (schedule.status !== "AVAILABLE") {
     throw new BadRequestError("该档期已被占用或不可用");
   }
+  const now = new Date();
+  if (schedule.startTime <= now) {
+    throw new BadRequestError("档期已过期");
+  }
   if (schedule.counselorId !== payload.counselorId) {
     throw new BadRequestError("档期与心理师不匹配");
   }

@@ -117,9 +117,9 @@ export async function createCounselorSchedule(ctx: Context) {
       issues: parsed.error.flatten(),
     });
   }
-  const schedule = await createSchedule(authUser.sub, parsed.data);
+  const schedules = await createSchedule(authUser.sub, parsed.data);
   ctx.status = 201;
-  ctx.body = { schedule };
+  ctx.body = { schedules };
 }
 
 /**

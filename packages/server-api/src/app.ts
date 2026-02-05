@@ -39,8 +39,8 @@ export function createApp() {
     bodyParser({
       // 仅允许 JSON 解析，避免误处理 multipart；头像上传走 Base64 JSON。
       enableTypes: ["json"],
-      // 放宽 JSON 体积上限，兼容头像 Base64 上传。
-      jsonLimit: "3mb",
+      // 放宽 JSON 体积上限，兼容头像与申请附件的 Base64 上传。
+      jsonLimit: "10mb",
     }),
   );
 

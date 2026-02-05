@@ -244,23 +244,6 @@ CREATE TABLE IF NOT EXISTS `evidence_records` (
   KEY `idx_evidence_target` (`target_type`, `target_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `content_items` (
-  `id` VARCHAR(36) NOT NULL PRIMARY KEY,
-  `type` ENUM('ARTICLE', 'VIDEO', 'NOTICE') NOT NULL,
-  `title` VARCHAR(200) NOT NULL,
-  `summary` TEXT NULL,
-  `content` TEXT NULL,
-  `cover_url` VARCHAR(255) NULL,
-  `status` ENUM('DRAFT', 'PUBLISHED') NOT NULL DEFAULT 'DRAFT',
-  `created_by` VARCHAR(36) NOT NULL,
-  `updated_by` VARCHAR(36) NULL,
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `published_at` DATETIME NULL,
-  KEY `idx_content_type` (`type`),
-  KEY `idx_content_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `notifications` (
   `id` VARCHAR(36) NOT NULL PRIMARY KEY,
   `user_id` VARCHAR(36) NOT NULL,

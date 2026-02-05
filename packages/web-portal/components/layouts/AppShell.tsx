@@ -35,8 +35,6 @@ const USER_NAV: NavItem[] = [
   { label: "预约管理", href: "/appointments" },
   { label: "咨询记录", href: "/consultations" },
   { label: "咨询反馈", href: "/feedback" },
-  { label: "举报中心", href: "/reports" },
-  { label: "内容阅读", href: "/articles" },
 ];
 
 // 心理咨询师导航项，用于档期、预约与统计。
@@ -185,7 +183,7 @@ export function AppShell({
         </nav>
         <div className="header-actions">
           <div className="search-pill">
-            <input type="text" placeholder="搜索预约/内容/咨询师" />
+            <input type="text" placeholder="搜索预约/咨询师" />
             <span>搜索</span>
           </div>
           <Link href="/login" className="ghost-btn small">
