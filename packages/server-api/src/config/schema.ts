@@ -45,6 +45,7 @@ export async function ensureDatabaseSchema(
   await createReportTables(connection, collation);
   await createEvidenceTables(connection, collation);
   await createNotificationTables(connection, collation);
+  await createEmailVerificationTables(connection, collation);
   await createPasswordResetTables(connection, collation);
   await createLogTables(connection, collation);
 }
@@ -453,6 +454,30 @@ async function createNotificationTables(
       sent_at DATETIME NULL,
       error_message TEXT NULL,
       KEY idx_email_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
+  `);
+}
+
+/**
+ * 邮箱验证码表，用于注册与密码修改等流程。
+ */
+async function createEmailVerificationTables(
+  connection: mysql.Connection,
+  collation: string,
+) {
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      id VARCHAR(36) NOT NULL PRIMARY KEY,
+      user_id VARCHAR(36) NULL,
+      email VARCHAR(255) NOT NULL,
+      token_hash VARCHAR(255) NOT NULL,
+      purpose ENUM('REGISTER', 'PASSWORD_CHANGE') NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used_at DATETIME NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_email_verification_email (email),
+      KEY idx_email_verification_purpose (purpose),
+      KEY idx_email_verification_expires (expires_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
   `);
 }

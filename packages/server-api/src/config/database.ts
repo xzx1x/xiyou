@@ -19,6 +19,7 @@ const DEFAULT_IDENTITY_WHITELIST: Array<{
   { code: "202202102", role: "USER", description: "示例普通用户账号 A" },
   { code: "202202103", role: "USER", description: "示例普通用户账号 B" },
   { code: "202202104", role: "USER", description: "示例普通用户账号 C" },
+  { code: "202202105", role: "USER", description: "示例普通用户账号 D" },
   { code: "123456", role: "ADMIN", description: "示例管理员账号" },
 ];
 

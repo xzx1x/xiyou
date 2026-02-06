@@ -11,6 +11,9 @@ const qqEmail = z
 export const registerSchema = z.object({
   email: qqEmail,
   password: z.string().min(8, "密码至少 8 位"),
+  verificationCode: z
+    .string()
+    .regex(/^\d{6}$/, "验证码应为 6 位数字"),
   nickname: z.string().min(2).max(50).optional(),
   identityCode: z
     .string()
@@ -20,6 +23,19 @@ export const registerSchema = z.object({
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+/**
+ * 注册验证码申请。
+ */
+export const registerRequestSchema = z.object({
+  email: qqEmail,
+  smtpAuthCode: z
+    .string()
+    .min(6, "授权码不能为空")
+    .max(64, "授权码长度不合法"),
+});
+
+export type RegisterRequestInput = z.infer<typeof registerRequestSchema>;
 
 export const loginSchema = z.object({
   email: qqEmail,
@@ -33,6 +49,10 @@ export type LoginInput = z.infer<typeof loginSchema>;
  */
 export const passwordResetRequestSchema = z.object({
   email: qqEmail,
+  smtpAuthCode: z
+    .string()
+    .min(6, "授权码不能为空")
+    .max(64, "授权码长度不合法"),
 });
 
 export type PasswordResetRequestInput = z.infer<

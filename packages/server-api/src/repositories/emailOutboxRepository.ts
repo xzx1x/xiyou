@@ -12,15 +12,16 @@ export type CreateEmailOutboxInput = {
 };
 
 /**
- * 写入邮件待发送记录，供后续接入 QQ 邮件接口。
+ * 写入邮件待发送记录，便于追踪发送状态。
  */
 export async function createEmailOutbox(
   input: CreateEmailOutboxInput,
-): Promise<void> {
+): Promise<{ id: string }> {
+  const id = crypto.randomUUID();
   await pool.execute<ResultSetHeader>(
     "INSERT INTO email_outbox (id, user_id, email, subject, body, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [
-      crypto.randomUUID(),
+      id,
       input.userId ?? null,
       input.email,
       input.subject,
@@ -28,5 +29,21 @@ export async function createEmailOutbox(
       input.status ?? "PENDING",
       new Date(),
     ],
+  );
+  return { id };
+}
+
+/**
+ * 更新邮件队列状态与错误信息。
+ */
+export async function updateEmailOutboxStatus(
+  id: string,
+  status: EmailOutboxStatus,
+  errorMessage?: string | null,
+): Promise<void> {
+  const sentAt = status === "SENT" ? new Date() : null;
+  await pool.execute<ResultSetHeader>(
+    "UPDATE email_outbox SET status = ?, sent_at = ?, error_message = ? WHERE id = ?",
+    [status, sentAt, errorMessage ?? null, id],
   );
 }

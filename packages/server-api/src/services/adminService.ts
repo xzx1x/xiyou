@@ -19,6 +19,12 @@ export type UserStatusInput = {
   reason?: string | null;
 };
 
+// 管理员发布公告的输入结构。
+export type AnnouncementInput = {
+  title: string;
+  message: string;
+};
+
 /**
  * 管理员查询用户列表，支持关键字检索。
  */
@@ -90,4 +96,24 @@ export async function resetUserPasswordByAdmin(
     "密码重置通知",
     "管理员已重置你的密码，请尽快登录修改以确保安全。",
   );
+}
+
+/**
+ * 管理员发布公告，发送给当前已注册的所有账号。
+ */
+export async function publishAnnouncementByAdmin(
+  input: AnnouncementInput,
+): Promise<number> {
+  const title = input.title.trim();
+  const message = input.message.trim();
+  const users = await listUsers();
+  if (users.length === 0) {
+    return 0;
+  }
+  await Promise.all(
+    users.map((user) =>
+      notifyInApp(user.id, title, message, "/notifications"),
+    ),
+  );
+  return users.length;
 }

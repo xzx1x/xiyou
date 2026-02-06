@@ -48,6 +48,7 @@ export interface PublicUserProfile {
 export interface RegisterPayload {
   email: string;
   password: string;
+  verificationCode: string;
   identityCode: string;
   nickname?: string;
 }
@@ -58,11 +59,11 @@ export interface LoginPayload {
 }
 
 /**
- * 修改密码请求体，要求包含旧密码与新密码。
+ * 修改密码请求体，使用验证码确认身份。
  */
 export interface PasswordChangePayload {
-  currentPassword: string;
   newPassword: string;
+  verificationCode: string;
 }
 
 /**
@@ -382,6 +383,16 @@ interface PasswordResetConfirmResponse {
   message: string;
 }
 
+interface RegisterVerificationResponse {
+  message: string;
+  verificationCode?: string;
+}
+
+interface PasswordChangeVerificationResponse {
+  message: string;
+  verificationCode?: string;
+}
+
 interface CounselorApplicationResponse {
   application: CounselorApplication | null;
   evidence?: EvidenceRecord;
@@ -600,6 +611,19 @@ export async function registerUser(payload: RegisterPayload): Promise<User> {
 }
 
 /**
+ * 发送注册验证码。
+ */
+export async function requestRegisterVerification(
+  email: string,
+  smtpAuthCode: string,
+): Promise<RegisterVerificationResponse> {
+  return request<RegisterVerificationResponse>("/api/auth/register/request", {
+    method: "POST",
+    body: JSON.stringify({ email, smtpAuthCode }),
+  });
+}
+
+/**
  * 登录 API：返回 Token + 用户信息，前端可保存 Token 以调用受保护接口。
  */
 export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
@@ -650,6 +674,22 @@ export async function updatePassword(
 }
 
 /**
+ * 发送修改密码验证码。
+ */
+export async function requestPasswordChangeVerification(
+  smtpAuthCode: string,
+): Promise<PasswordChangeVerificationResponse> {
+  return request<PasswordChangeVerificationResponse>(
+    "/api/account/password/verification",
+    {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify({ smtpAuthCode }),
+    },
+  );
+}
+
+/**
  * 上传头像（Base64 Data URL），返回更新后的用户资料。
  */
 export async function uploadAvatar(dataUrl: string): Promise<User> {
@@ -664,10 +704,13 @@ export async function uploadAvatar(dataUrl: string): Promise<User> {
 /**
  * 发起密码重置申请。
  */
-export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResponse> {
+export async function requestPasswordReset(payload: {
+  email: string;
+  smtpAuthCode: string;
+}): Promise<PasswordResetRequestResponse> {
   return request<PasswordResetRequestResponse>("/api/auth/password/reset/request", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -1401,6 +1444,11 @@ export async function getEvidenceDetail(evidenceId: string): Promise<EvidenceRec
   return evidence;
 }
 
+type AdminAnnouncementResponse = {
+  message: string;
+  sent: number;
+};
+
 /**
  * 管理员查询用户列表。
  */
@@ -1450,6 +1498,21 @@ export async function resetUserPassword(userId: string, newPassword: string): Pr
     body: JSON.stringify({ newPassword }),
   });
   return message;
+}
+
+/**
+ * 管理员发布公告。
+ */
+export async function publishAnnouncement(payload: {
+  title: string;
+  message: string;
+}): Promise<AdminAnnouncementResponse> {
+  const { message, sent } = await request<AdminAnnouncementResponse>("/api/admin/announcements", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(payload),
+  });
+  return { message, sent };
 }
 
 /**

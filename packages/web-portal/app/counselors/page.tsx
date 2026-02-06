@@ -61,6 +61,8 @@ export default function CounselorsPage() {
   const router = useRouter();
   // 心理师列表数据。
   const [counselors, setCounselors] = useState<CounselorListItem[]>([]);
+  // 搜索关键字。
+  const [searchKeyword, setSearchKeyword] = useState("");
   // 当前选中的心理师编号。
   const [activeCounselorId, setActiveCounselorId] = useState<string | null>(null);
   // 当前选中心理师的可预约档期。
@@ -151,6 +153,42 @@ export default function CounselorsPage() {
     const timer = window.setTimeout(() => setError(null), 3000);
     return () => window.clearTimeout(timer);
   }, [error]);
+
+  const normalizedKeyword = searchKeyword.trim().toLowerCase();
+  const filteredCounselors = useMemo(() => {
+    if (!normalizedKeyword) {
+      return counselors;
+    }
+    return counselors.filter((counselor) => {
+      const haystack = [
+        counselor.nickname,
+        counselor.email,
+        counselor.specialties,
+        counselor.bio,
+        counselor.officeLocation,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedKeyword);
+    });
+  }, [counselors, normalizedKeyword]);
+
+  useEffect(() => {
+    if (filteredCounselors.length === 0) {
+      if (activeCounselorId !== null) {
+        setActiveCounselorId(null);
+      }
+      return;
+    }
+    if (!activeCounselorId) {
+      setActiveCounselorId(filteredCounselors[0].id);
+      return;
+    }
+    if (!filteredCounselors.some((item) => item.id === activeCounselorId)) {
+      setActiveCounselorId(filteredCounselors[0].id);
+    }
+  }, [filteredCounselors, activeCounselorId]);
 
   /**
    * 选中心理师后加载档期列表。
@@ -543,47 +581,62 @@ export default function CounselorsPage() {
       {viewMode === "BOOK" && (
         <div className="split-grid">
           <div className="card-block">
-            <h3>心理师列表</h3>
-            <ul className="list counselor-list">
-              {counselors.map((counselor) => {
-                const displayName = counselor.nickname ?? counselor.email;
-                const avatarUrl =
-                  resolveAvatarUrl(counselor.avatarUrl) || "/default-avatar.svg";
-                return (
-                  <li key={counselor.id}>
-                    <div className="counselor-item">
-                      <button
-                        type="button"
-                        className="avatar-button counselor-avatar"
-                        onClick={() => openProfileModal(counselor)}
-                        aria-label={`查看${displayName}资料`}
-                      >
-                        <img
-                          src={avatarUrl}
-                          alt={`${displayName}头像`}
-                          onError={(event) => {
-                            const target = event.currentTarget;
-                            if (!target.src.endsWith("/default-avatar.svg")) {
-                              target.src = "/default-avatar.svg";
-                            }
-                          }}
-                        />
-                      </button>
-                      <div className="counselor-meta">
+            <div className="list-header">
+              <h3>心理师列表</h3>
+              <div className="search-pill list-search">
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(event) => setSearchKeyword(event.target.value)}
+                  placeholder="搜索姓名/邮箱/特长"
+                />
+                <span>搜索</span>
+              </div>
+            </div>
+            {filteredCounselors.length === 0 ? (
+              <p className="muted">未找到匹配的心理师。</p>
+            ) : (
+              <ul className="list counselor-list">
+                {filteredCounselors.map((counselor) => {
+                  const displayName = counselor.nickname ?? counselor.email;
+                  const avatarUrl =
+                    resolveAvatarUrl(counselor.avatarUrl) || "/default-avatar.svg";
+                  return (
+                    <li key={counselor.id}>
+                      <div className="counselor-item">
                         <button
                           type="button"
-                          className={activeCounselorId === counselor.id ? "pill active" : "pill"}
-                          onClick={() => setActiveCounselorId(counselor.id)}
+                          className="avatar-button counselor-avatar"
+                          onClick={() => openProfileModal(counselor)}
+                          aria-label={`查看${displayName}资料`}
                         >
-                          {displayName}
+                          <img
+                            src={avatarUrl}
+                            alt={`${displayName}头像`}
+                            onError={(event) => {
+                              const target = event.currentTarget;
+                              if (!target.src.endsWith("/default-avatar.svg")) {
+                                target.src = "/default-avatar.svg";
+                              }
+                            }}
+                          />
                         </button>
-                        <div className="muted">{counselor.specialties ?? "暂无特长描述"}</div>
+                        <div className="counselor-meta">
+                          <button
+                            type="button"
+                            className={activeCounselorId === counselor.id ? "pill active" : "pill"}
+                            onClick={() => setActiveCounselorId(counselor.id)}
+                          >
+                            {displayName}
+                          </button>
+                          <div className="muted">{counselor.specialties ?? "暂无特长描述"}</div>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
           <div className="card-block">
             <h3>预约档期</h3>

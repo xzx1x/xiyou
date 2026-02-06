@@ -3,6 +3,7 @@ import { authenticate } from "../middlewares/authenticate";
 import { authorizeRoles } from "../middlewares/authorize";
 import {
   listUsers,
+  publishAnnouncement,
   resetUserPassword,
   updateUserRole,
   updateUserStatus,
@@ -32,6 +33,12 @@ adminRouter.post(
   authenticate,
   authorizeRoles(["ADMIN"]),
   resetUserPassword,
+);
+adminRouter.post(
+  "/announcements",
+  authenticate,
+  authorizeRoles(["ADMIN"]),
+  publishAnnouncement,
 );
 adminRouter.get("/logs", authenticate, authorizeRoles(["ADMIN"]), listLogs);
 

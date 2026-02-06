@@ -25,6 +25,11 @@ import {
   markPasswordResetUsed,
 } from "../repositories/passwordResetRepository";
 import { notifyEmail, notifyInApp } from "./notificationService";
+import {
+  consumeEmailVerificationCode,
+  sendEmailVerificationCode,
+  validateEmailVerificationCode,
+} from "./emailVerificationService";
 
 const SALT_ROUNDS = 10;
 // 密码重置 Token 过期时间（分钟）。
@@ -72,6 +77,11 @@ export async function registerUser(input: RegisterInput) {
       throw new ConflictError("昵称已被占用");
     }
   }
+  const verification = await validateEmailVerificationCode(
+    input.email,
+    input.verificationCode,
+    "REGISTER",
+  );
   const normalizedForStore = normalizedIdentity.toUpperCase();
   const hashed = await bcrypt.hash(input.password, SALT_ROUNDS);
   const user = await createUser({
@@ -81,6 +91,7 @@ export async function registerUser(input: RegisterInput) {
     identityCode: normalizedForStore,
     role: allowedIdentity.defaultRole,
   });
+  await consumeEmailVerificationCode(verification.id);
   return toSafeUser(user);
 }
 
@@ -122,7 +133,10 @@ export async function loginUser(input: LoginInput) {
 /**
  * 发起密码重置：生成 Token 并写入重置记录与通知。
  */
-export async function requestPasswordReset(email: string) {
+export async function requestPasswordReset(
+  email: string,
+  smtpAuthCode: string,
+) {
   const user = await findUserByEmail(email);
   if (!user) {
     return {
@@ -152,11 +166,43 @@ export async function requestPasswordReset(email: string) {
     user.email,
     "密码重置请求",
     `你的密码重置验证码：${rawToken}（${RESET_TOKEN_EXPIRE_MINUTES} 分钟内有效）`,
+    {
+      throwOnFailure: true,
+      smtp: {
+        user: email,
+        pass: smtpAuthCode,
+        from: email,
+      },
+    },
   );
   return {
     message: "如果账号存在，我们已发送重置指引。",
     resetToken:
       process.env.NODE_ENV === "production" ? undefined : rawToken,
+  };
+}
+
+/**
+ * 注册验证码申请。
+ */
+export async function requestRegisterVerification(
+  email: string,
+  smtpAuthCode: string,
+) {
+  const existing = await findUserByEmail(email);
+  if (existing) {
+    throw new ConflictError("邮箱已注册");
+  }
+  const { code } = await sendEmailVerificationCode({
+    email,
+    purpose: "REGISTER",
+    label: "注册",
+    smtpAuthCode,
+  });
+  return {
+    message: "验证码已发送",
+    verificationCode:
+      process.env.NODE_ENV === "production" ? undefined : code,
   };
 }
 

@@ -1,4 +1,7 @@
-import { createEmailOutbox } from "../repositories/emailOutboxRepository";
+import {
+  createEmailOutbox,
+  updateEmailOutboxStatus,
+} from "../repositories/emailOutboxRepository";
 import {
   createNotification,
   listNotifications,
@@ -6,6 +9,7 @@ import {
   markNotificationRead,
   type NotificationRecord,
 } from "../repositories/notificationRepository";
+import { sendEmail, type SmtpOverride } from "./emailService";
 
 /**
  * 创建站内通知，便于用户在消息中心查看。
@@ -33,6 +37,7 @@ export async function notifyEmail(
   email: string,
   subject: string,
   message: string,
+  options?: { throwOnFailure?: boolean; smtp?: SmtpOverride },
 ): Promise<void> {
   if (userId) {
     await createNotification({
@@ -43,12 +48,28 @@ export async function notifyEmail(
       link: null,
     });
   }
-  await createEmailOutbox({
+  const outbox = await createEmailOutbox({
     userId,
     email,
     subject,
     body: message,
   });
+  try {
+    await sendEmail({
+      to: email,
+      subject,
+      text: message,
+      smtp: options?.smtp,
+    });
+    await updateEmailOutboxStatus(outbox.id, "SENT");
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+    await updateEmailOutboxStatus(outbox.id, "FAILED", errorMessage);
+    if (options?.throwOnFailure) {
+      throw error instanceof Error ? error : new Error(errorMessage);
+    }
+  }
 }
 
 /**

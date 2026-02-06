@@ -4,11 +4,13 @@ import {
   passwordResetConfirmSchema,
   passwordResetRequestSchema,
   registerSchema,
+  registerRequestSchema,
 } from "../schemas/authSchema";
 import {
   confirmPasswordReset,
   loginUser,
   registerUser,
+  requestRegisterVerification,
   requestPasswordReset,
 } from "../services/authService";
 import { BadRequestError } from "../utils/errors";
@@ -23,6 +25,24 @@ export async function register(ctx: Context) {
   const user = await registerUser(parsed.data);
   ctx.status = 201;
   ctx.body = { user };
+}
+
+/**
+ * 发送注册验证码。
+ */
+export async function requestRegisterCode(ctx: Context) {
+  const parsed = registerRequestSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    throw new BadRequestError("注册验证码请求不合法", {
+      issues: parsed.error.flatten(),
+    });
+  }
+  const result = await requestRegisterVerification(
+    parsed.data.email,
+    parsed.data.smtpAuthCode,
+  );
+  ctx.status = 200;
+  ctx.body = result;
 }
 
 export async function login(ctx: Context) {
@@ -47,7 +67,10 @@ export async function requestResetPassword(ctx: Context) {
       issues: parsed.error.flatten(),
     });
   }
-  const result = await requestPasswordReset(parsed.data.email);
+  const result = await requestPasswordReset(
+    parsed.data.email,
+    parsed.data.smtpAuthCode,
+  );
   ctx.status = 200;
   ctx.body = result;
 }

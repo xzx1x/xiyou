@@ -9,7 +9,12 @@ import {
   updateUserPassword,
   updateUserProfile,
 } from "../repositories/userRepository";
-import { BadRequestError, ConflictError, UnauthorizedError } from "../utils/errors";
+import { BadRequestError, ConflictError } from "../utils/errors";
+import {
+  consumeEmailVerificationCode,
+  sendEmailVerificationCode,
+  validateEmailVerificationCode,
+} from "./emailVerificationService";
 
 // 资料更新载荷，允许字段为空或缺省。
 export type ProfilePayload = {
@@ -22,8 +27,8 @@ export type ProfilePayload = {
 
 // 修改密码时的输入结构。
 export type PasswordChangePayload = {
-  currentPassword: string;
   newPassword: string;
+  verificationCode: string;
 };
 
 // 头像解析后的结构，包含二进制与扩展名。
@@ -146,7 +151,7 @@ export async function updateAvatar(userId: string, dataUrl: string) {
 }
 
 /**
- * 修改密码：校验当前密码后写入新密码哈希。
+ * 修改密码：校验验证码后写入新密码哈希。
  */
 export async function changePassword(
   userId: string,
@@ -156,13 +161,44 @@ export async function changePassword(
   if (!user) {
     throw new BadRequestError("用户不存在");
   }
-  const isMatch = await bcrypt.compare(payload.currentPassword, user.password);
-  if (!isMatch) {
-    throw new UnauthorizedError("当前密码不正确");
-  }
-  if (payload.currentPassword === payload.newPassword) {
+  const isSamePassword = await bcrypt.compare(
+    payload.newPassword,
+    user.password,
+  );
+  if (isSamePassword) {
     throw new BadRequestError("新密码不能与当前密码相同");
   }
+  const verification = await validateEmailVerificationCode(
+    user.email,
+    payload.verificationCode,
+    "PASSWORD_CHANGE",
+  );
   const hashed = await bcrypt.hash(payload.newPassword, SALT_ROUNDS);
   await updateUserPassword(userId, hashed);
+  await consumeEmailVerificationCode(verification.id);
+}
+
+/**
+ * 发送密码修改验证码。
+ */
+export async function requestPasswordChangeVerification(
+  userId: string,
+  smtpAuthCode: string,
+) {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new BadRequestError("用户不存在");
+  }
+  const { code } = await sendEmailVerificationCode({
+    email: user.email,
+    userId,
+    purpose: "PASSWORD_CHANGE",
+    label: "密码修改",
+    smtpAuthCode,
+  });
+  return {
+    message: "验证码已发送",
+    verificationCode:
+      process.env.NODE_ENV === "production" ? undefined : code,
+  };
 }

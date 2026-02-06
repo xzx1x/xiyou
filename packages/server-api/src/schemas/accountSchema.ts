@@ -24,8 +24,20 @@ export const profileUpdateSchema = z.object({
  * 修改密码校验规则，避免弱密码与空密码。
  */
 export const passwordChangeSchema = z.object({
-  currentPassword: z.string().min(8, "当前密码至少 8 位"),
   newPassword: z.string().min(8, "新密码至少 8 位"),
+  verificationCode: z
+    .string()
+    .regex(/^\d{6}$/, "验证码应为 6 位数字"),
+});
+
+/**
+ * 密码修改验证码申请。
+ */
+export const passwordChangeRequestSchema = z.object({
+  smtpAuthCode: z
+    .string()
+    .min(6, "授权码不能为空")
+    .max(64, "授权码长度不合法"),
 });
 
 /**

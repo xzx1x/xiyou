@@ -1,11 +1,13 @@
 import type { Context } from "koa";
 import {
+  adminAnnouncementSchema,
   adminResetPasswordSchema,
   adminUserRoleSchema,
   adminUserStatusSchema,
 } from "../schemas/adminSchema";
 import {
   getUserList,
+  publishAnnouncementByAdmin,
   resetUserPasswordByAdmin,
   updateUserRoleByAdmin,
   updateUserStatusByAdmin,
@@ -78,4 +80,19 @@ export async function resetUserPassword(ctx: Context) {
   await resetUserPasswordByAdmin(userId, parsed.data.newPassword);
   ctx.status = 200;
   ctx.body = { message: "密码已重置" };
+}
+
+/**
+ * 管理员发布公告（发送系统消息给当前所有账号）。
+ */
+export async function publishAnnouncement(ctx: Context) {
+  const parsed = adminAnnouncementSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    throw new BadRequestError("公告内容不合法", {
+      issues: parsed.error.flatten(),
+    });
+  }
+  const sent = await publishAnnouncementByAdmin(parsed.data);
+  ctx.status = 200;
+  ctx.body = { message: "公告已发送", sent };
 }

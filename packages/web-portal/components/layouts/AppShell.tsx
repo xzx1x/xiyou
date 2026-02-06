@@ -52,6 +52,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "账号管理", href: "/admin/users" },
   { label: "心理师审批", href: "/admin/counselor-applications" },
   { label: "论坛审核", href: "/admin/forum-review" },
+  { label: "发布公告", href: "/admin/announcements" },
   { label: "举报处理", href: "/admin/reports" },
   { label: "统计报表", href: "/admin/stats" },
   { label: "访问日志", href: "/admin/logs" },
@@ -184,10 +185,6 @@ export function AppShell({
           ))}
         </nav>
         <div className="header-actions">
-          <div className="search-pill">
-            <input type="text" placeholder="搜索预约/咨询师" />
-            <span>搜索</span>
-          </div>
           <Link href="/login" className="ghost-btn small">
             切换账号
           </Link>

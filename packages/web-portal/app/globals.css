@@ -323,6 +323,24 @@ a {
   cursor: pointer;
 }
 
+.list-search {
+  margin: 0;
+  min-width: 200px;
+}
+
+.list-search input {
+  width: 100%;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
 .dashboard-main {
   padding: 2rem 3rem 3rem;
   display: flex;

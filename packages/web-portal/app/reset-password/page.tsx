@@ -11,6 +11,8 @@ import { CenterToast } from "../../components/ui/CenterToast";
 export default function ResetPasswordPage() {
   // 邮箱输入值，用于发起重置请求。
   const [email, setEmail] = useState("");
+  // SMTP 授权码输入值。
+  const [smtpAuthCode, setSmtpAuthCode] = useState("");
   // 申请阶段的反馈信息。
   const [requestMessage, setRequestMessage] = useState<string | null>(null);
   // 重置验证码输入值。
@@ -50,15 +52,16 @@ export default function ResetPasswordPage() {
    */
   const handleRequestSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!smtpAuthCode.trim()) {
+      setRequestError("请输入 QQ 邮箱授权码。");
+      return;
+    }
     setRequesting(true);
     setRequestMessage(null);
     setRequestError(null);
     try {
-      const result = await requestPasswordReset(email);
+      const result = await requestPasswordReset({ email, smtpAuthCode });
       setRequestMessage(result.message);
-      if (result.resetToken) {
-        setToken(result.resetToken);
-      }
     } catch (err) {
       setRequestError(err instanceof Error ? err.message : "请求失败，请稍后重试");
     } finally {
@@ -77,6 +80,9 @@ export default function ResetPasswordPage() {
     try {
       const result = await confirmPasswordReset({ token, newPassword });
       setConfirmMessage(result.message);
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 200);
     } catch (err) {
       setConfirmError(err instanceof Error ? err.message : "重置失败，请稍后重试");
     } finally {
@@ -90,6 +96,9 @@ export default function ResetPasswordPage() {
       <section className="card">
         <h1>重置密码</h1>
         <p>请输入 QQ 邮箱获取验证码，再使用验证码设置新密码。</p>
+        <p className="hint">
+          验证码通过 QQ 邮箱发送，需开启 SMTP 并使用授权码。
+        </p>
         <form className="auth-form" onSubmit={handleRequestSubmit}>
           <label>
             QQ 邮箱
@@ -100,6 +109,16 @@ export default function ResetPasswordPage() {
               placeholder="example@qq.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          <label>
+            邮箱授权码
+            <input
+              name="smtpAuthCode"
+              required
+              placeholder="QQ 邮箱 SMTP 授权码"
+              value={smtpAuthCode}
+              onChange={(event) => setSmtpAuthCode(event.target.value)}
             />
           </label>
           <button className="btn btn-primary" disabled={requesting} type="submit">

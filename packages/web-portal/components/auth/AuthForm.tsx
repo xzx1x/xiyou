@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   loginUser,
   registerUser,
+  requestRegisterVerification,
   type LoginPayload,
   type RegisterPayload,
 } from "../../lib/api";
@@ -18,6 +19,8 @@ export function AuthForm({ mode }: Props) {
   type FormState = {
     email: string;
     password: string;
+    verificationCode: string;
+    smtpAuthCode: string;
     identityCode: string;
     nickname: string;
   };
@@ -25,10 +28,13 @@ export function AuthForm({ mode }: Props) {
   const [formData, setFormData] = useState<FormState>({
     email: "",
     password: "",
+    verificationCode: "",
+    smtpAuthCode: "",
     identityCode: "",
     nickname: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const toast = errorMessage
@@ -49,6 +55,33 @@ export function AuthForm({ mode }: Props) {
 
   const router = useRouter();
 
+  const handleSendCode = async () => {
+    if (!formData.email.trim()) {
+      setErrorMessage("请先填写 QQ 邮箱");
+      return;
+    }
+    if (!formData.smtpAuthCode.trim()) {
+      setErrorMessage("请先填写 QQ 邮箱授权码");
+      return;
+    }
+    setIsSendingCode(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    try {
+      const result = await requestRegisterVerification(
+        formData.email,
+        formData.smtpAuthCode,
+      );
+      setSuccessMessage(result.message);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "发送验证码失败，请稍后再试",
+      );
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
   /**
    * 提交事件：根据 mode 调用登录或注册 API，并展示结果消息。
    */
@@ -62,6 +95,7 @@ export function AuthForm({ mode }: Props) {
         const payload: RegisterPayload = {
           email: formData.email,
           password: formData.password,
+          verificationCode: formData.verificationCode,
           identityCode: formData.identityCode,
           nickname: formData.nickname ? formData.nickname : undefined,
         };
@@ -138,18 +172,48 @@ export function AuthForm({ mode }: Props) {
               onChange={(event) => handleChange("nickname", event.target.value)}
             />
           </label>
+          <label>
+            邮箱授权码
+            <input
+              name="smtpAuthCode"
+              placeholder="QQ 邮箱 SMTP 授权码"
+              value={formData.smtpAuthCode}
+              onChange={(event) =>
+                handleChange("smtpAuthCode", event.target.value)
+              }
+            />
+          </label>
+          <label>
+            验证码
+            <div className="inline-actions">
+              <input
+                name="verificationCode"
+                required
+                placeholder="邮件中的 6 位验证码"
+                value={formData.verificationCode}
+                onChange={(event) =>
+                  handleChange("verificationCode", event.target.value)
+                }
+              />
+              <button
+                className="btn btn-secondary small"
+                type="button"
+                disabled={isSendingCode}
+                onClick={handleSendCode}
+              >
+                {isSendingCode ? "发送中..." : "发送验证码"}
+              </button>
+            </div>
+          </label>
+          <p className="hint">
+            验证码由 QQ 邮箱发送，如未收到请确认邮箱已开启 SMTP 并使用授权码。
+          </p>
         </>
       )}
 
       <button className="btn btn-primary" disabled={isSubmitting} type="submit">
         {isSubmitting ? "提交中..." : mode === "register" ? "注册" : "登录"}
       </button>
-      {mode === "register" ? (
-        <p className="hint spaced">
-          系统会根据后台白名单自动识别身份；未在白名单内的编号会被拒绝注册。
-        </p>
-      ) : null}
-
       {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
     </form>
   );

@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   getProfile,
+  requestPasswordChangeVerification,
   resolveAvatarUrl,
   updatePassword,
   updateProfile,
@@ -31,16 +32,18 @@ const DEFAULT_PROFILE_FORM: ProfileInput = {
 };
 
 type PasswordFormState = {
-  currentPassword: string;
   newPassword: string;
   confirmPassword: string;
+  verificationCode: string;
+  smtpAuthCode: string;
 };
 
 // 密码表单初始值，用于重置安全设置表单。
 const DEFAULT_PASSWORD_FORM: PasswordFormState = {
-  currentPassword: "",
   newPassword: "",
   confirmPassword: "",
+  verificationCode: "",
+  smtpAuthCode: "",
 };
 
 // 头像文件大小上限（字节）。
@@ -97,6 +100,7 @@ export default function ProfilePage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordCodeSending, setPasswordCodeSending] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [avatarMessage, setAvatarMessage] = useState<string | null>(null);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
@@ -262,6 +266,31 @@ export default function ProfilePage() {
   };
 
   /**
+   * 发送密码修改验证码。
+   */
+  const handlePasswordCodeSend = async () => {
+    setPasswordError(null);
+    setPasswordMessage(null);
+    if (!passwordForm.smtpAuthCode.trim()) {
+      setPasswordError("请先填写 QQ 邮箱授权码。");
+      return;
+    }
+    setPasswordCodeSending(true);
+    try {
+      const result = await requestPasswordChangeVerification(
+        passwordForm.smtpAuthCode,
+      );
+      setPasswordMessage(result.message);
+    } catch (err) {
+      setPasswordError(
+        err instanceof Error ? err.message : "发送验证码失败，请稍后重试。",
+      );
+    } finally {
+      setPasswordCodeSending(false);
+    }
+  };
+
+  /**
    * 打开密码修改弹窗。
    */
   const openPasswordModal = () => {
@@ -302,8 +331,8 @@ export default function ProfilePage() {
       return;
     }
     const payload: PasswordChangePayload = {
-      currentPassword: passwordForm.currentPassword,
       newPassword: passwordForm.newPassword,
+      verificationCode: passwordForm.verificationCode,
     };
     try {
       await updatePassword(payload);
@@ -497,16 +526,40 @@ export default function ProfilePage() {
             </div>
             <form className="security-form" onSubmit={handlePasswordSubmit}>
               <label>
-                当前密码
+                邮箱授权码
                 <input
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  placeholder="请输入当前密码"
+                  value={passwordForm.smtpAuthCode}
+                  placeholder="QQ 邮箱 SMTP 授权码"
                   onChange={(event) =>
-                    handlePasswordChange("currentPassword", event.target.value)
+                    handlePasswordChange("smtpAuthCode", event.target.value)
                   }
+                  required
                 />
               </label>
+              <label>
+                验证码
+                <div className="inline-actions">
+                  <input
+                    value={passwordForm.verificationCode}
+                    placeholder="邮件中的 6 位验证码"
+                    onChange={(event) =>
+                      handlePasswordChange("verificationCode", event.target.value)
+                    }
+                    required
+                  />
+                  <button
+                    className="btn btn-secondary small"
+                    type="button"
+                    disabled={passwordCodeSending}
+                    onClick={handlePasswordCodeSend}
+                  >
+                    {passwordCodeSending ? "发送中..." : "发送验证码"}
+                  </button>
+                </div>
+              </label>
+              <p className="hint">
+                验证码由 QQ 邮箱发送，需开启 SMTP 并使用授权码。
+              </p>
               <label>
                 新密码
                 <input

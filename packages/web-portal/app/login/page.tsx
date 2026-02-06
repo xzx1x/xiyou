@@ -23,7 +23,7 @@ export default function LoginPage() {
           忘记密码？<Link href="/reset-password">找回密码</Link>
         </p>
         <p className="hint">
-          演示白名单：202202102 / 202202103 / 202202104（普通用户），123456（管理员）。
+          演示白名单：202202102 / 202202103 / 202202104 / 202202105（普通用户），123456（管理员）。
         </p>
       </section>
     </main>

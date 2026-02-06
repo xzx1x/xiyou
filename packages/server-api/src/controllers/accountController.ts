@@ -1,6 +1,17 @@
 import type { Context } from "koa";
-import { profileUpdateSchema, passwordChangeSchema, avatarUploadSchema } from "../schemas/accountSchema";
-import { changePassword, getProfile, updateAvatar, updateProfile } from "../services/profileService";
+import {
+  profileUpdateSchema,
+  passwordChangeSchema,
+  passwordChangeRequestSchema,
+  avatarUploadSchema,
+} from "../schemas/accountSchema";
+import {
+  changePassword,
+  getProfile,
+  requestPasswordChangeVerification,
+  updateAvatar,
+  updateProfile,
+} from "../services/profileService";
 import { BadRequestError } from "../utils/errors";
 
 /**
@@ -54,7 +65,7 @@ export async function patchAccountProfile(ctx: Context) {
 }
 
 /**
- * 修改当前用户密码，要求传入旧密码与新密码。
+ * 修改当前用户密码，使用验证码确认身份。
  */
 export async function patchAccountPassword(ctx: Context) {
   const authUser = ctx.state.user;
@@ -70,6 +81,28 @@ export async function patchAccountPassword(ctx: Context) {
   await changePassword(authUser.sub, parsed.data);
   ctx.status = 200;
   ctx.body = { message: "密码修改成功" };
+}
+
+/**
+ * 发送当前用户密码修改验证码。
+ */
+export async function requestAccountPasswordVerification(ctx: Context) {
+  const authUser = ctx.state.user;
+  if (!authUser) {
+    ctx.throw(401, "未授权");
+  }
+  const parsed = passwordChangeRequestSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    throw new BadRequestError("验证码请求信息不合法", {
+      issues: parsed.error.flatten(),
+    });
+  }
+  const result = await requestPasswordChangeVerification(
+    authUser.sub,
+    parsed.data.smtpAuthCode,
+  );
+  ctx.status = 200;
+  ctx.body = result;
 }
 
 /**

@@ -15,3 +15,17 @@ export const adminUserRoleSchema = z.object({
 export const adminResetPasswordSchema = z.object({
   newPassword: z.string().min(8, "新密码至少 8 位"),
 });
+
+// 管理员发布公告的校验。
+export const adminAnnouncementSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "公告标题不能为空")
+    .max(60, "公告标题最多 60 个字"),
+  message: z
+    .string()
+    .trim()
+    .min(1, "公告内容不能为空")
+    .max(1000, "公告内容最多 1000 个字"),
+});

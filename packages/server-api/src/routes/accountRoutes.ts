@@ -2,6 +2,7 @@ import Router from "@koa/router";
 import { authenticate } from "../middlewares/authenticate";
 import {
   getAccountProfile,
+  requestAccountPasswordVerification,
   patchAccountPassword,
   patchAccountProfile,
   uploadAccountAvatar,
@@ -14,6 +15,7 @@ const accountRouter = new Router({ prefix: "/api/account" });
 
 accountRouter.get("/profile", authenticate, getAccountProfile);
 accountRouter.patch("/profile", authenticate, patchAccountProfile);
+accountRouter.post("/password/verification", authenticate, requestAccountPasswordVerification);
 accountRouter.patch("/password", authenticate, patchAccountPassword);
 accountRouter.post("/avatar", authenticate, uploadAccountAvatar);
 
