@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../components/layouts/AppShell";
 import { CenterToast } from "../../../components/ui/CenterToast";
 import {
@@ -43,6 +43,7 @@ const readFileAsDataUrl = (file: File) =>
  * 论坛帖子详情页面。
  */
 export default function ForumDetailPage() {
+  const router = useRouter();
   const params = useParams();
   // 路由参数中的帖子编号。
   const postId = String(params?.id ?? "");
@@ -460,6 +461,17 @@ export default function ForumDetailPage() {
     });
   };
 
+  const handleStartChatFromProfile = () => {
+    if (!activeAuthor) {
+      return;
+    }
+    if (!friends.some((friend) => friend.friendId === activeAuthor.id)) {
+      return;
+    }
+    closeAuthorModal();
+    router.push(`/notifications?tab=chat&friendId=${encodeURIComponent(activeAuthor.id)}`);
+  };
+
   const formatRole = (role: PublicUserProfile["role"]) => {
     if (role === "ADMIN") {
       return "管理员";
@@ -864,6 +876,11 @@ export default function ForumDetailPage() {
                 >
                   {isFriend ? "已是好友" : "➕ 添加好友"}
                 </button>
+                {isFriend && (
+                  <button className="btn btn-secondary" type="button" onClick={handleStartChatFromProfile}>
+                    💬 开始聊天
+                  </button>
+                )}
                 <button className="btn btn-secondary" type="button" onClick={handleReportAuthor}>
                   🚩 举报
                 </button>

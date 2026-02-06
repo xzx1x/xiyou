@@ -9,6 +9,7 @@ import {
   type ChangeEvent,
   type MouseEvent,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "../../components/layouts/AppShell";
 import { CenterToast } from "../../components/ui/CenterToast";
 import {
@@ -63,6 +64,7 @@ const CHAT_PAGE_SIZE = 20;
  * 消息页面：系统消息、好友聊天、添加好友。
  */
 export default function NotificationsPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<MessageTab>("system");
   // 通知列表数据。
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
@@ -90,6 +92,7 @@ export default function NotificationsPage() {
     dataUrl: string;
   } | null>(null);
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [queryHandled, setQueryHandled] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   // 当前登录用户。
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -189,6 +192,23 @@ export default function NotificationsPage() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (queryHandled) {
+      return;
+    }
+    const tab = searchParams.get("tab");
+    const friendId = searchParams.get("friendId");
+    if (tab === "chat") {
+      setActiveTab("chat");
+      if (friendId) {
+        setActiveFriendId(friendId);
+      }
+    } else if (tab === "system" || tab === "add-friend") {
+      setActiveTab(tab);
+    }
+    setQueryHandled(true);
+  }, [queryHandled, searchParams]);
 
   useEffect(() => {
     if (!message) {
@@ -905,6 +925,18 @@ export default function NotificationsPage() {
     openReportModal(activeProfile);
   };
 
+  const handleStartChatFromProfile = () => {
+    if (!activeProfile) {
+      return;
+    }
+    if (!friends.some((friend) => friend.friendId === activeProfile.id)) {
+      return;
+    }
+    closeProfileModal();
+    setActiveTab("chat");
+    setActiveFriendId(activeProfile.id);
+  };
+
   const activeNotice = useMemo(
     () => notifications.find((notice) => notice.id === activeId) ?? null,
     [activeId, notifications],
@@ -1494,6 +1526,11 @@ export default function NotificationsPage() {
                 >
                   {isFriend ? "已是好友" : "➕ 添加好友"}
                 </button>
+                {isFriend && (
+                  <button className="btn btn-secondary" type="button" onClick={handleStartChatFromProfile}>
+                    💬 开始聊天
+                  </button>
+                )}
                 <button className="btn btn-secondary" type="button" onClick={handleReportFromProfile}>
                   🚩 举报
                 </button>

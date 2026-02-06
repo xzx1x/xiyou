@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../../components/layouts/AppShell";
 import { CenterToast } from "../../components/ui/CenterToast";
 import {
@@ -39,6 +39,7 @@ const readFileAsDataUrl = (file: File) =>
  * 论坛首页：展示帖子与发布入口。
  */
 export default function ForumPage() {
+  const router = useRouter();
   // 帖子列表数据。
   const [posts, setPosts] = useState<ForumPost[]>([]);
   // 新帖子表单数据。
@@ -94,7 +95,7 @@ export default function ForumPage() {
       setError(null);
       try {
         const [list, friendList, profile] = await Promise.all([
-          listForumPosts(),
+          listForumPosts("APPROVED"),
           listFriends(),
           getProfile(),
         ]);
@@ -208,8 +209,7 @@ export default function ForumPage() {
         title: form.title,
         content: form.content,
       });
-      setPosts((prev) => [result.post, ...prev]);
-      showMessage("帖子已提交，已存证");
+      showMessage("帖子已提交，等待审核");
       setForm({ title: "", content: "" });
       closeCreateModal();
     } catch (err) {
@@ -352,6 +352,17 @@ export default function ForumPage() {
     openReportModal(activeAuthor);
   };
 
+  const handleStartChatFromProfile = () => {
+    if (!activeAuthor) {
+      return;
+    }
+    if (!friends.some((friend) => friend.friendId === activeAuthor.id)) {
+      return;
+    }
+    closeAuthorModal();
+    router.push(`/notifications?tab=chat&friendId=${encodeURIComponent(activeAuthor.id)}`);
+  };
+
   const formatRole = (role: PublicUserProfile["role"]) => {
     if (role === "ADMIN") {
       return "管理员";
@@ -397,13 +408,15 @@ export default function ForumPage() {
             : null;
 
   return (
-    <AppShell title="论坛社区" description="发帖需要先审核后发布。">
-      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
-      <div className="forum-toolbar">
-        <button className="btn btn-secondary" type="button" onClick={openCreateModal}>
-          📝 发布帖子
+    <AppShell
+      title="论坛社区"
+      panelAction={
+        <button className="ghost-btn small" type="button" onClick={openCreateModal}>
+          发布帖子
         </button>
-      </div>
+      }
+    >
+      {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
       <div className="card-block">
         <h3>最新帖子</h3>
         {posts.length === 0 ? (
@@ -422,12 +435,27 @@ export default function ForumPage() {
               const avatarUrl = resolveAvatarUrl(author?.avatarUrl) || "/default-avatar.svg";
               const publishedAt = formatDateTime(post.createdAt);
               return (
-                <article key={post.id} className="post-card">
+                <article
+                  key={post.id}
+                  className="post-card post-card-button"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`/forum/${post.id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      router.push(`/forum/${post.id}`);
+                    }
+                  }}
+                >
                   <div className="post-card-header">
                     <button
                       className="avatar-button"
                       type="button"
-                      onClick={() => openAuthorModal(author)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openAuthorModal(author);
+                      }}
                       disabled={isAnonymous}
                       aria-label={isAnonymous ? "匿名用户" : "查看发帖人信息"}
                     >
@@ -451,11 +479,6 @@ export default function ForumPage() {
                       {publishedAt && <div className="muted">发布时间：{publishedAt}</div>}
                       <p className="post-excerpt">{post.content}</p>
                     </div>
-                  </div>
-                  <div className="post-card-actions">
-                    <Link className="btn btn-secondary" href={`/forum/${post.id}`}>
-                      🔍 查看详情
-                    </Link>
                   </div>
                 </article>
               );
@@ -566,6 +589,11 @@ export default function ForumPage() {
                 >
                   {isFriend ? "已是好友" : "➕ 添加好友"}
                 </button>
+                {isFriend && (
+                  <button className="btn btn-secondary" type="button" onClick={handleStartChatFromProfile}>
+                    💬 开始聊天
+                  </button>
+                )}
                 <button className="btn btn-secondary" type="button" onClick={handleReportAuthor}>
                   🚩 举报
                 </button>

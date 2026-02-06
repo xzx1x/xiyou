@@ -60,6 +60,21 @@ export default function AppointmentDetailPage() {
     return () => window.clearTimeout(timer);
   }, [error]);
 
+  const formatAppointmentStatus = (status: Appointment["status"]) => {
+    switch (status) {
+      case "BOOKED":
+        return "已预约";
+      case "CANCELLED_BY_USER":
+        return "已取消（用户）";
+      case "CANCELLED_BY_COUNSELOR":
+        return "已取消（心理师）";
+      case "COMPLETED":
+        return "已完成";
+      default:
+        return status;
+    }
+  };
+
   /**
    * 取消当前预约。
    */
@@ -103,7 +118,7 @@ export default function AppointmentDetailPage() {
       {appointment ? (
         <div className="card-block">
           <h3>预约信息</h3>
-          <p>状态：{appointment.status}</p>
+          <p>状态：{formatAppointmentStatus(appointment.status)}</p>
           <p>备注：{appointment.userNote ?? "-"}</p>
           <p>创建时间：{new Date(appointment.createdAt).toLocaleString("zh-CN")}</p>
           {appointment.status === "BOOKED" && (

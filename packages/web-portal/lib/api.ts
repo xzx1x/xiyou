@@ -146,6 +146,15 @@ export interface Appointment {
   updatedAt: string;
   cancelledAt?: string | null;
   completedAt?: string | null;
+  userProfile?: PublicUserProfile | null;
+  counselorProfile?: PublicUserProfile | null;
+  schedule?: {
+    id: string;
+    startTime: string;
+    endTime: string;
+    mode: "ONLINE" | "OFFLINE";
+    location?: string | null;
+  } | null;
 }
 
 // 咨询记录结构。

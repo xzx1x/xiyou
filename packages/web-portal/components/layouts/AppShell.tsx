@@ -18,6 +18,7 @@ type AppShellProps = {
   children: ReactNode;
   requiredRoles?: UserRole[];
   withPanel?: boolean;
+  panelAction?: ReactNode;
 };
 
 // 通用导航项，所有角色均可访问。
@@ -66,6 +67,7 @@ export function AppShell({
   requiredRoles,
   // 是否使用默认面板布局包裹内容。
   withPanel = true,
+  panelAction,
 }: AppShellProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -199,9 +201,13 @@ export function AppShell({
                 <h2>{title}</h2>
                 <p>{description ?? `当前身份：${user?.role ?? "未知"}`}</p>
               </div>
-              <button className="ghost-btn small" type="button" onClick={() => router.back()}>
-                返回
-              </button>
+              {panelAction !== undefined ? (
+                panelAction
+              ) : (
+                <button className="ghost-btn small" type="button" onClick={() => router.back()}>
+                  返回
+                </button>
+              )}
             </div>
             <div className="panel-body">{children}</div>
           </section>

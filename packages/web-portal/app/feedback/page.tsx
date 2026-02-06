@@ -76,6 +76,21 @@ export default function FeedbackPage() {
     return new Map(appointments.map((item) => [item.id, item]));
   }, [appointments]);
 
+  const formatAppointmentStatus = (status: Appointment["status"]) => {
+    switch (status) {
+      case "BOOKED":
+        return "已预约";
+      case "CANCELLED_BY_USER":
+        return "已取消（用户）";
+      case "CANCELLED_BY_COUNSELOR":
+        return "已取消（心理师）";
+      case "COMPLETED":
+        return "已完成";
+      default:
+        return status;
+    }
+  };
+
   /**
    * 提交反馈。
    */
@@ -135,7 +150,9 @@ export default function FeedbackPage() {
                 <option value="">请选择预约记录</option>
                 {appointments.map((appointment) => (
                   <option key={appointment.id} value={appointment.id}>
-                    {`${new Date(appointment.createdAt).toLocaleString("zh-CN")} · ${appointment.status}`}
+                    {`${new Date(appointment.createdAt).toLocaleString("zh-CN")} · ${formatAppointmentStatus(
+                      appointment.status,
+                    )}`}
                   </option>
                 ))}
               </select>

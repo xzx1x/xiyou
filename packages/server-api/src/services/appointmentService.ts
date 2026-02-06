@@ -11,9 +11,43 @@ import {
   markScheduleBooked,
   updateCounselorScheduleStatus,
 } from "../repositories/counselorRepository";
+import {
+  listUsersByIds,
+  type UserRecord,
+} from "../repositories/userRepository";
 import { BadRequestError, UnauthorizedError } from "../utils/errors";
 import { createEvidencePlaceholder } from "./evidenceService";
 import { notifyInApp } from "./notificationService";
+
+type AppointmentProfile = {
+  id: string;
+  nickname: string | null;
+  gender: string | null;
+  major: string | null;
+  grade: string | null;
+  avatarUrl: string | null;
+  role: UserRecord["role"];
+};
+
+type AppointmentScheduleSummary = {
+  id: string;
+  startTime: Date;
+  endTime: Date;
+  mode: "ONLINE" | "OFFLINE";
+  location: string | null;
+};
+
+function toAppointmentProfile(user: UserRecord): AppointmentProfile {
+  return {
+    id: user.id,
+    nickname: user.nickname,
+    gender: user.gender,
+    major: user.major,
+    grade: user.grade,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+  };
+}
 
 /**
  * 创建预约：校验档期有效并标记为已预约。
@@ -74,7 +108,47 @@ export async function getAppointments(options: {
   userId?: string;
   counselorId?: string;
 }) {
-  return listAppointments(options);
+  const appointments = await listAppointments(options);
+  if (appointments.length === 0) {
+    return [];
+  }
+  const userIds = appointments.map((appointment) => appointment.userId);
+  const counselorIds = appointments.map((appointment) => appointment.counselorId);
+  const profiles = await listUsersByIds([...userIds, ...counselorIds]);
+  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  const scheduleIds = Array.from(
+    new Set(appointments.map((appointment) => appointment.scheduleId).filter(Boolean)),
+  );
+  const scheduleEntries = await Promise.all(
+    scheduleIds.map(async (scheduleId) => {
+      const schedule = await findCounselorScheduleById(scheduleId);
+      return [scheduleId, schedule] as const;
+    }),
+  );
+  const scheduleMap = new Map(
+    scheduleEntries
+      .filter(([, schedule]) => schedule)
+      .map(([scheduleId, schedule]) => [scheduleId, schedule!]),
+  );
+  return appointments.map((appointment) => {
+    const userProfile = profileMap.get(appointment.userId);
+    const counselorProfile = profileMap.get(appointment.counselorId);
+    const schedule = scheduleMap.get(appointment.scheduleId);
+    return {
+      ...appointment,
+      userProfile: userProfile ? toAppointmentProfile(userProfile) : null,
+      counselorProfile: counselorProfile ? toAppointmentProfile(counselorProfile) : null,
+      schedule: schedule
+        ? ({
+            id: schedule.id,
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            mode: schedule.mode,
+            location: schedule.location ?? null,
+          } satisfies AppointmentScheduleSummary)
+        : null,
+    };
+  });
 }
 
 /**

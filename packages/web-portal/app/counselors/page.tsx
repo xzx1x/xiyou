@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../../components/layouts/AppShell";
 import { CenterToast } from "../../components/ui/CenterToast";
 import {
@@ -57,6 +58,7 @@ const readFileAsDataUrl = (file: File) =>
  * 用户端心理咨询师列表与预约页面。
  */
 export default function CounselorsPage() {
+  const router = useRouter();
   // 心理师列表数据。
   const [counselors, setCounselors] = useState<CounselorListItem[]>([]);
   // 当前选中的心理师编号。
@@ -491,6 +493,17 @@ export default function CounselorsPage() {
     openReportModal(activeProfile);
   };
 
+  const handleStartChatFromProfile = () => {
+    if (!activeProfile) {
+      return;
+    }
+    if (!friends.some((friend) => friend.friendId === activeProfile.id)) {
+      return;
+    }
+    closeProfileModal();
+    router.push(`/notifications?tab=chat&friendId=${encodeURIComponent(activeProfile.id)}`);
+  };
+
   if (loading) {
     return (
       <AppShell title="心理咨询师">
@@ -772,6 +785,11 @@ export default function CounselorsPage() {
                 >
                   {friendLabel}
                 </button>
+                {isFriend && (
+                  <button className="btn btn-secondary" type="button" onClick={handleStartChatFromProfile}>
+                    💬 开始聊天
+                  </button>
+                )}
                 <button className="btn btn-secondary" type="button" onClick={handleReportFromProfile}>
                   🚩 举报
                 </button>
