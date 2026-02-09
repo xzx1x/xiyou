@@ -91,7 +91,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="page-shell">
+    <main className="page-shell auth-shell">
       {toast && <CenterToast type={toast.type} message={toast.message} onClose={toast.onClose} />}
       <section className="card">
         <h1>重置密码</h1>
