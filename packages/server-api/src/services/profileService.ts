@@ -10,6 +10,7 @@ import {
   updateUserProfile,
 } from "../repositories/userRepository";
 import { BadRequestError, ConflictError } from "../utils/errors";
+import { isSpecialTestAccountEmail } from "../config/specialAccounts";
 import {
   consumeEmailVerificationCode,
   sendEmailVerificationCode,
@@ -189,15 +190,19 @@ export async function requestPasswordChangeVerification(
   if (!user) {
     throw new BadRequestError("用户不存在");
   }
+  const isSpecialAccount = isSpecialTestAccountEmail(user.email);
   const { code } = await sendEmailVerificationCode({
     email: user.email,
     userId,
     purpose: "PASSWORD_CHANGE",
     label: "密码修改",
     smtpAuthCode,
+    skipEmailSend: isSpecialAccount,
   });
   return {
-    message: "验证码已发送",
+    message: isSpecialAccount
+      ? "测试账号无需 QQ 授权码，验证码已生成。"
+      : "验证码已发送",
     verificationCode:
       process.env.NODE_ENV === "production" ? undefined : code,
   };

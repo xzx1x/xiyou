@@ -60,10 +60,6 @@ export function AuthForm({ mode }: Props) {
       setErrorMessage("请先填写 QQ 邮箱");
       return;
     }
-    if (!formData.smtpAuthCode.trim()) {
-      setErrorMessage("请先填写 QQ 邮箱授权码");
-      return;
-    }
     setIsSendingCode(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -126,7 +122,10 @@ export function AuthForm({ mode }: Props) {
   };
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <form
+      className={mode === "register" ? "auth-form auth-form-register" : "auth-form"}
+      onSubmit={handleSubmit}
+    >
       <label>
         QQ 邮箱
         <input
@@ -158,7 +157,7 @@ export function AuthForm({ mode }: Props) {
             <input
               name="identityCode"
               required
-              placeholder="普通用户示例：20250001；管理员示例：ADM-0001"
+              placeholder="填写学生学号,或者教职工工号"
               value={formData.identityCode}
               onChange={(event) => handleChange("identityCode", event.target.value)}
             />

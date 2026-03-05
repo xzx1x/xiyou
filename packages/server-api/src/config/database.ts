@@ -16,11 +16,18 @@ const DEFAULT_IDENTITY_WHITELIST: Array<{
   role: IdentityRole;
   description: string;
 }> = [
-  { code: "202202102", role: "USER", description: "示例普通用户账号 A" },
-  { code: "202202103", role: "USER", description: "示例普通用户账号 B" },
-  { code: "202202104", role: "USER", description: "示例普通用户账号 C" },
-  { code: "202202105", role: "USER", description: "示例普通用户账号 D" },
+  { code: "202202100", role: "USER", description: "示例普通用户账号 202202100" },
+  { code: "202202101", role: "USER", description: "示例普通用户账号 202202101" },
+  { code: "202202102", role: "USER", description: "示例普通用户账号 202202102" },
+  { code: "202202103", role: "USER", description: "示例普通用户账号 202202103" },
+  { code: "202202104", role: "USER", description: "示例普通用户账号 202202104" },
+  { code: "202202105", role: "USER", description: "示例普通用户账号 202202105" },
+  { code: "202202106", role: "USER", description: "示例普通用户账号 202202106" },
+  { code: "202202107", role: "USER", description: "示例普通用户账号 202202107" },
+  { code: "202202108", role: "USER", description: "示例普通用户账号 202202108" },
+  { code: "202202109", role: "USER", description: "示例普通用户账号 202202109" },
   { code: "123456", role: "ADMIN", description: "示例管理员账号" },
+  { code: "12345678", role: "ADMIN", description: "示例管理员账号 12345678" },
 ];
 
 interface DatabaseConfig {

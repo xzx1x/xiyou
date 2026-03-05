@@ -52,10 +52,6 @@ export default function ResetPasswordPage() {
    */
   const handleRequestSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!smtpAuthCode.trim()) {
-      setRequestError("请输入 QQ 邮箱授权码。");
-      return;
-    }
     setRequesting(true);
     setRequestMessage(null);
     setRequestError(null);
@@ -105,7 +101,6 @@ export default function ResetPasswordPage() {
             <input
               name="email"
               type="email"
-              required
               placeholder="example@qq.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -115,7 +110,6 @@ export default function ResetPasswordPage() {
             邮箱授权码
             <input
               name="smtpAuthCode"
-              required
               placeholder="QQ 邮箱 SMTP 授权码"
               value={smtpAuthCode}
               onChange={(event) => setSmtpAuthCode(event.target.value)}
@@ -153,7 +147,7 @@ export default function ResetPasswordPage() {
             {confirming ? "重置中..." : "确认重置"}
           </button>
         </form>
-        <p className="hint spaced">
+        <p className="hint spaced reset-login-hint">
           已想起密码？<Link href="/login">返回登录</Link>
         </p>
       </section>
