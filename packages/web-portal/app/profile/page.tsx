@@ -271,6 +271,10 @@ export default function ProfilePage() {
   const handlePasswordCodeSend = async () => {
     setPasswordError(null);
     setPasswordMessage(null);
+    if (!passwordForm.smtpAuthCode.trim()) {
+      setPasswordError("请先填写 QQ 邮箱授权码。");
+      return;
+    }
     setPasswordCodeSending(true);
     try {
       const result = await requestPasswordChangeVerification(

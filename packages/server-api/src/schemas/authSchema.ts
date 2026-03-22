@@ -31,9 +31,8 @@ export const registerRequestSchema = z.object({
   email: qqEmail,
   smtpAuthCode: z
     .string()
-    .max(64, "授权码长度不合法")
-    .optional()
-    .default(""),
+    .min(6, "授权码不能为空")
+    .max(64, "授权码长度不合法"),
 });
 
 export type RegisterRequestInput = z.infer<typeof registerRequestSchema>;
@@ -52,9 +51,8 @@ export const passwordResetRequestSchema = z.object({
   email: qqEmail,
   smtpAuthCode: z
     .string()
-    .max(64, "授权码长度不合法")
-    .optional()
-    .default(""),
+    .min(6, "授权码不能为空")
+    .max(64, "授权码长度不合法"),
 });
 
 export type PasswordResetRequestInput = z.infer<

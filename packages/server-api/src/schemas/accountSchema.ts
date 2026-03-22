@@ -36,9 +36,8 @@ export const passwordChangeSchema = z.object({
 export const passwordChangeRequestSchema = z.object({
   smtpAuthCode: z
     .string()
-    .max(64, "授权码长度不合法")
-    .optional()
-    .default(""),
+    .min(6, "授权码不能为空")
+    .max(64, "授权码长度不合法"),
 });
 
 /**

@@ -86,10 +86,6 @@ a:hover {
     inset 0 0 0 1px rgba(15, 23, 42, 0.02);
 }
 
-.register-card {
-  padding: 2rem 2.5rem 2rem;
-}
-
 .card h1 {
   font-size: 1.5rem;
   margin-bottom: 1rem;
@@ -165,26 +161,6 @@ a:hover {
 
 .auth-form button {
   margin-top: 0.5rem;
-}
-
-.auth-form-register > .btn-primary {
-  margin-top: -2.2rem;
-}
-
-.register-card .auth-form-register {
-  gap: 0.8rem;
-}
-
-.register-card > .hint {
-  margin-top: calc(-0.5rem + 15px);
-}
-
-.login-card > .hint.spaced {
-  margin-top: calc(0.35rem + 10px);
-}
-
-.login-card > .hint {
-  margin-top: calc(-0.5rem + 10px);
 }
 
 .status {
@@ -288,10 +264,6 @@ a:hover {
 
 .hint.spaced {
   margin-top: 0.35rem;
-}
-
-.reset-login-hint {
-  margin-top: calc(0.35rem + 10px);
 }
 
 .dashboard-shell {
@@ -1654,20 +1626,6 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.card-block > .form-stack:first-child:has(> .inline-field > input[placeholder=邮箱或昵称]) {
-  flex-direction: row;
-  align-items: flex-end;
-}
-
-.card-block > .form-stack:first-child:has(> .inline-field > input[placeholder=邮箱或昵称]) .inline-field {
-  flex: 1;
-}
-
-.card-block > .form-stack:first-child:has(> .inline-field > input[placeholder=邮箱或昵称]) > .btn.btn-secondary {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.8rem;
 }
 
 .inline-field {

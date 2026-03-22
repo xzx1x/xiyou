@@ -74,7 +74,6 @@ export function AppShell({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [redirecting, setRedirecting] = useState(false);
 
   /**
    * 加载当前登录用户，用于渲染权限菜单。
@@ -87,18 +86,7 @@ export function AppShell({
         const data = await getProfile();
         setUser(data);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "请先登录";
-        if (
-          message.includes("Token 无效或已过期") ||
-          message.includes("请先登录") ||
-          message.includes("需要登录")
-        ) {
-          localStorage.removeItem("campus_auth_token");
-          setRedirecting(true);
-          router.replace("/login");
-          return;
-        }
-        setError(message);
+        setError(err instanceof Error ? err.message : "请先登录");
       } finally {
         setLoading(false);
       }
@@ -130,7 +118,7 @@ export function AppShell({
   const roleDenied =
     !!requiredRoles && !!user && !requiredRoles.includes(user.role);
 
-  if (loading || redirecting) {
+  if (loading) {
     return (
       <div className="page-shell">
         <div className="card">
@@ -147,6 +135,9 @@ export function AppShell({
         <div className="card">
           <h1>需要登录</h1>
           <p>{error}</p>
+          <Link className="btn btn-primary" href="/login">
+            前往登录
+          </Link>
         </div>
       </div>
     );

@@ -9,15 +9,7 @@ import {
   markNotificationRead,
   type NotificationRecord,
 } from "../repositories/notificationRepository";
-import { BadRequestError } from "../utils/errors";
 import { sendEmail, type SmtpOverride } from "./emailService";
-
-function toFriendlyEmailError(options?: { smtp?: SmtpOverride }) {
-  if (options?.smtp) {
-    return new BadRequestError("验证码发送失败，请检查 QQ 邮箱与 SMTP 授权码后重试");
-  }
-  return new Error("邮件服务暂时不可用，请稍后重试");
-}
 
 /**
  * 创建站内通知，便于用户在消息中心查看。
@@ -75,7 +67,7 @@ export async function notifyEmail(
       error instanceof Error ? error.message : String(error);
     await updateEmailOutboxStatus(outbox.id, "FAILED", errorMessage);
     if (options?.throwOnFailure) {
-      throw toFriendlyEmailError(options);
+      throw error instanceof Error ? error : new Error(errorMessage);
     }
   }
 }

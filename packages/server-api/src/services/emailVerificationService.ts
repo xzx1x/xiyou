@@ -23,8 +23,7 @@ export async function sendEmailVerificationCode(input: {
   userId?: string | null;
   purpose: EmailVerificationPurpose;
   label: string;
-  smtpAuthCode?: string;
-  skipEmailSend?: boolean;
+  smtpAuthCode: string;
 }): Promise<{ code: string; expiresAt: Date }> {
   const code = generateCode();
   const tokenHash = hashToken(code);
@@ -38,22 +37,20 @@ export async function sendEmailVerificationCode(input: {
     purpose: input.purpose,
     expiresAt,
   });
-  if (!input.skipEmailSend) {
-    await notifyEmail(
-      input.userId ?? null,
-      input.email,
-      `${input.label}验证码`,
-      `你的${input.label}验证码：${code}（${EMAIL_VERIFICATION_EXPIRE_MINUTES} 分钟内有效）`,
-      {
-        throwOnFailure: true,
-        smtp: {
-          user: input.email,
-          pass: input.smtpAuthCode ?? "",
-          from: input.email,
-        },
+  await notifyEmail(
+    input.userId ?? null,
+    input.email,
+    `${input.label}验证码`,
+    `你的${input.label}验证码：${code}（${EMAIL_VERIFICATION_EXPIRE_MINUTES} 分钟内有效）`,
+    {
+      throwOnFailure: true,
+      smtp: {
+        user: input.email,
+        pass: input.smtpAuthCode,
+        from: input.email,
       },
-    );
-  }
+    },
+  );
   return { code, expiresAt };
 }
 
