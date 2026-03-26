@@ -18,11 +18,15 @@ export default function RegisterPage() {
             </span>
           </div>
         </header>
-        <section className="card register-card">
+        <section className="card">
           <h1>注册新账号</h1>
           <AuthForm mode="register" />
+          <br />
           <p className="hint">
             已有账号？<Link href="/login">直接登录</Link>
+          </p>
+          <p className="hint">
+            当前演示白名单：普通用户学号 202202102 / 202202103 / 202202104 / 202202105；管理员学号 123456。
           </p>
         </section>
       </div>

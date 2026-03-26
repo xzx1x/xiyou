@@ -15,6 +15,7 @@
 - `public/`：静态资源
 
 ## 运行配置
+<<<<<<< HEAD
 
 复制 `.env.example` 为 `.env`，至少配置：
 
@@ -27,6 +28,11 @@ NEXT_PUBLIC_CHAIN_EXPLORER_URL=https://sepolia.etherscan.io
 NEXT_PUBLIC_CHAIN_CURRENCY_NAME=Ether
 NEXT_PUBLIC_CHAIN_CURRENCY_SYMBOL=ETH
 ```
+=======
+- 默认监听端口：`3000`
+- API 目标地址：通过 `NEXT_PUBLIC_API_BASE_URL` 设置，例子参见 `.env.example`
+- 注册表单会要求填写学号/工号；当前演示白名单包含普通用户 `202202102/202202103/202202104/202202105` 与管理员 `123456`，仅这些编号可注册。
+>>>>>>> 10b8759f4514ebe7165de8aab278af78fa633aaf
 
 ## 常用命令
 

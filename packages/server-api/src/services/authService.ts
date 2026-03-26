@@ -15,10 +15,6 @@ import {
 import { findAllowedIdentity } from "../repositories/identityWhitelistRepository";
 import { env } from "../config/env";
 import {
-  getSpecialTestAccountByEmail,
-  SPECIAL_TEST_PASSWORD,
-} from "../config/specialAccounts";
-import {
   BadRequestError,
   ConflictError,
   UnauthorizedError,
@@ -39,30 +35,6 @@ const SALT_ROUNDS = 10;
 // 密码重置 Token 过期时间（分钟）。
 const RESET_TOKEN_EXPIRE_MINUTES = 30;
 
-function normalizeIdentity(identityCode: string) {
-  return identityCode.trim().toUpperCase();
-}
-
-function assertSpecialAccountInput(
-  email: string,
-  identityCode: string,
-  password: string,
-) {
-  const specialAccount = getSpecialTestAccountByEmail(email);
-  if (!specialAccount) {
-    return null;
-  }
-  if (password !== SPECIAL_TEST_PASSWORD) {
-    throw new BadRequestError("该测试账号密码固定为 a88888888");
-  }
-  if (normalizeIdentity(identityCode) !== specialAccount.identityCode) {
-    throw new BadRequestError(
-      "该测试邮箱仅允许绑定学号/工号 " + specialAccount.identityCode,
-    );
-  }
-  return specialAccount;
-}
-
 /**
  * 从用户对象中移除加密后的密码，避免泄漏到响应体。
  */
@@ -82,27 +54,16 @@ export async function registerUser(input: RegisterInput) {
   if (existing) {
     throw new ConflictError("邮箱已注册");
   }
-  const normalizedIdentity = normalizeIdentity(input.identityCode);
+  const normalizedIdentity = input.identityCode.trim();
   if (!normalizedIdentity) {
     throw new BadRequestError("学号/工号不能为空");
   }
-  const specialAccount = assertSpecialAccountInput(
-    input.email,
-    normalizedIdentity,
-    input.password,
-  );
-  let role: UserRole;
-  if (specialAccount) {
-    role = specialAccount.role;
-  } else {
-    const allowedIdentity = await findAllowedIdentity(normalizedIdentity);
-    if (!allowedIdentity) {
-      throw new BadRequestError("当前学号/工号不存在或尚未开放注册");
-    }
-    if (allowedIdentity.defaultRole === "COUNSELOR") {
-      throw new BadRequestError("心理咨询师身份需申请审核，暂不支持直接注册");
-    }
-    role = allowedIdentity.defaultRole;
+  const allowedIdentity = await findAllowedIdentity(normalizedIdentity);
+  if (!allowedIdentity) {
+    throw new BadRequestError("当前学号/工号不存在或尚未开放注册");
+  }
+  if (allowedIdentity.defaultRole === "COUNSELOR") {
+    throw new BadRequestError("心理咨询师身份需申请审核，暂不支持直接注册");
   }
   const identityOwner = await findUserByIdentityCode(normalizedIdentity);
   if (identityOwner) {
@@ -116,24 +77,21 @@ export async function registerUser(input: RegisterInput) {
       throw new ConflictError("昵称已被占用");
     }
   }
-  const verification = specialAccount
-    ? null
-    : await validateEmailVerificationCode(
-        input.email,
-        input.verificationCode,
-        "REGISTER",
-      );
+  const verification = await validateEmailVerificationCode(
+    input.email,
+    input.verificationCode,
+    "REGISTER",
+  );
+  const normalizedForStore = normalizedIdentity.toUpperCase();
   const hashed = await bcrypt.hash(input.password, SALT_ROUNDS);
   const user = await createUser({
     email: input.email,
     password: hashed,
     nickname: safeNickname,
-    identityCode: normalizedIdentity,
-    role,
+    identityCode: normalizedForStore,
+    role: allowedIdentity.defaultRole,
   });
-  if (verification) {
-    await consumeEmailVerificationCode(verification.id);
-  }
+  await consumeEmailVerificationCode(verification.id);
   return toSafeUser(user);
 }
 
@@ -149,40 +107,16 @@ export interface AuthTokenPayload {
 }
 
 export async function loginUser(input: LoginInput) {
-  const specialAccount = getSpecialTestAccountByEmail(input.email);
-  const isSpecialPassword = input.password === SPECIAL_TEST_PASSWORD;
-  let user = await findUserByEmail(input.email);
-  if (!user && specialAccount && isSpecialPassword) {
-    const identityOwner = await findUserByIdentityCode(specialAccount.identityCode);
-    if (identityOwner && identityOwner.email !== input.email.toLowerCase()) {
-      throw new UnauthorizedError("账号或密码错误");
-    }
-    const hashed = await bcrypt.hash(SPECIAL_TEST_PASSWORD, SALT_ROUNDS);
-    user = await createUser({
-      email: input.email,
-      password: hashed,
-      identityCode: specialAccount.identityCode,
-      role: specialAccount.role,
-    });
-  }
+  const user = await findUserByEmail(input.email);
   if (!user) {
     throw new UnauthorizedError("账号或密码错误");
   }
   if (user.isDisabled) {
     throw new UnauthorizedError("账号已被禁用");
   }
-  if (specialAccount) {
-    if (!isSpecialPassword) {
-      throw new UnauthorizedError("账号或密码错误");
-    }
-    if (normalizeIdentity(user.identityCode) !== specialAccount.identityCode) {
-      throw new UnauthorizedError("账号或密码错误");
-    }
-  } else {
-    const isMatch = await bcrypt.compare(input.password, user.password);
-    if (!isMatch) {
-      throw new UnauthorizedError("账号或密码错误");
-    }
+  const isMatch = await bcrypt.compare(input.password, user.password);
+  if (!isMatch) {
+    throw new UnauthorizedError("账号或密码错误");
   }
   await updateUserLastLogin(user.id);
   const token = jwt.sign(
@@ -203,7 +137,6 @@ export async function requestPasswordReset(
   email: string,
   smtpAuthCode: string,
 ) {
-  const specialAccount = getSpecialTestAccountByEmail(email);
   const user = await findUserByEmail(email);
   if (!user) {
     return {
@@ -228,8 +161,7 @@ export async function requestPasswordReset(
     "我们已收到你的密码重置请求，请尽快完成验证。",
     "/reset-password",
   );
-  if (!specialAccount) {
-    await notifyEmail(
+  await notifyEmail(
     user.id,
     user.email,
     "密码重置请求",
@@ -242,8 +174,7 @@ export async function requestPasswordReset(
         from: email,
       },
     },
-    );
-  }
+  );
   return {
     message: "如果账号存在，我们已发送重置指引。",
     resetToken:
@@ -258,17 +189,9 @@ export async function requestRegisterVerification(
   email: string,
   smtpAuthCode: string,
 ) {
-  const specialAccount = getSpecialTestAccountByEmail(email);
   const existing = await findUserByEmail(email);
   if (existing) {
     throw new ConflictError("邮箱已注册");
-  }
-  if (specialAccount) {
-    return {
-      message: "测试账号无需 QQ 授权码，可直接注册。",
-      verificationCode:
-        process.env.NODE_ENV === "production" ? undefined : "000000",
-    };
   }
   const { code } = await sendEmailVerificationCode({
     email,

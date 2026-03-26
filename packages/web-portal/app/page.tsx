@@ -105,6 +105,11 @@ const notifications = [
 // 测评结果亮点展示。
 const evaluationHighlights = [
   {
+    label: "情绪状态",
+    value: "24 分 · 轻度波动",
+    description: "建议继续保持作息规律，并记录每日情绪。",
+  },
+  {
     label: "压力负荷",
     value: "28 分 · 轻度压力",
     description: "可尝试呼吸练习与正念，心理师将在下一次会话中推进。",
@@ -142,12 +147,27 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+        <div className="status-panel">
+          <div>
+            <small>本周预约</small>
+            <strong>3 / 5 次</strong>
+          </div>
+          <div>
+            <small>最新消息</small>
+            <strong>收到 8 条面谈反馈</strong>
+          </div>
+          <div>
+            <small>链上存证</small>
+            <strong>42 条记录已占位</strong>
+          </div>
+        </div>
       </section>
 
       <section className="panel quick-actions">
         <div className="panel-heading">
           <div>
-            <h2>功能预览</h2>
+            <h2>一键跳转 · 功能概览</h2>
+            <p>快速进入预约、测评、心理社区等关键模块</p>
           </div>
           <Link href="/profile" className="ghost-btn small">
             完善资料
@@ -191,6 +211,49 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>最新消息预览</h2>
+            <p>消息模块统一展示预约结果、提醒与公告</p>
+          </div>
+          <Link href="/notifications" className="ghost-btn small">
+            查看全部
+          </Link>
+        </div>
+        <div className="timeline">
+          {notifications.map((item) => (
+            <div key={item.title} className="timeline-item">
+              <span>{item.time}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>测评与满意度亮点</h2>
+            <p>心理测评即时生成评分与建议</p>
+          </div>
+          <Link href="/assessments" className="ghost-btn small">
+            查看测评
+          </Link>
+        </div>
+        <div className="action-grid">
+          {evaluationHighlights.map((item) => (
+            <article key={item.label} className="action-card">
+              <h3>{item.label}</h3>
+              <strong>{item.value}</strong>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
     </AppShell>
   );
 }

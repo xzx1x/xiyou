@@ -65,7 +65,6 @@ export function AppShell({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -84,6 +83,7 @@ export function AppShell({
         const data = await getProfile();
         setUser(data);
       } catch (err) {
+<<<<<<< HEAD
         const message = err instanceof Error ? err.message : "请先登录";
         if (
           message.includes("Token 无效或已过期") ||
@@ -100,6 +100,9 @@ export function AppShell({
           return;
         }
         setError(message);
+=======
+        setError(err instanceof Error ? err.message : "请先登录");
+>>>>>>> 10b8759f4514ebe7165de8aab278af78fa633aaf
       } finally {
         setLoading(false);
       }
@@ -130,7 +133,7 @@ export function AppShell({
   const roleDenied =
     Boolean(requiredRoles) && Boolean(user) && !requiredRoles!.includes(user!.role);
 
-  if (loading || redirecting) {
+  if (loading) {
     return (
       <div className="page-shell">
         <div className="card">
@@ -147,6 +150,9 @@ export function AppShell({
         <div className="card">
           <h1>需要登录</h1>
           <p>{error}</p>
+          <Link className="btn btn-primary" href="/login">
+            前往登录
+          </Link>
         </div>
       </div>
     );
