@@ -22,3 +22,7 @@ export const consultationUpdateSchema = z.object({
   issueCategory: z.string().max(200).optional(),
   isCrisis: z.boolean().optional(),
 });
+
+export const consultationEvidenceConfirmSchema = z.object({
+  txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "txHash format is invalid"),
+});

@@ -1,0 +1,385 @@
+.pageShell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hero {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 28px;
+  padding: 1.4rem 1.55rem;
+  background:
+    radial-gradient(circle at top right, rgba(186, 230, 253, 0.38), transparent 28%),
+    linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+}
+
+.eyebrow {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.heroText {
+  margin: 0.55rem 0 0;
+  max-width: 46rem;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.pageGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.95fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.mainPanel,
+.sidePanel {
+  min-height: 0;
+  height: min(74vh, 48rem);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.panelScroll,
+.recordList {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+}
+
+.panelScroll::-webkit-scrollbar,
+.recordList::-webkit-scrollbar {
+  width: 7px;
+}
+
+.panelScroll::-webkit-scrollbar-track,
+.recordList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panelScroll::-webkit-scrollbar-thumb,
+.recordList::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+  border-radius: 999px;
+}
+
+.panelScroll {
+  padding: 1.35rem;
+}
+
+.sideHeader {
+  padding: 1.25rem 1.15rem 0.95rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.panelHeader h3,
+.sideHeader h3,
+.sectionTitle h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.panelHeader p,
+.sideHeader p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.fieldBlock,
+.checkboxBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.fieldLabel {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.input,
+.select,
+.textarea,
+.textareaLarge {
+  width: 100%;
+  border: 1px solid #d7dee8;
+  border-radius: 14px;
+  background: #f8fbff;
+  color: #0f172a;
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus,
+.textareaLarge:focus {
+  border-color: #93c5fd;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.22);
+}
+
+.textarea {
+  min-height: 132px;
+}
+
+.textareaLarge {
+  min-height: 180px;
+}
+
+.checkboxBlock {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.checkboxTopAlign {
+  justify-content: center;
+}
+
+.checkboxBlock input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.checkboxBlock span {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.overviewGrid,
+.evidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.overviewCard,
+.evidenceCard {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 0.9rem 1rem;
+}
+
+.overviewCard span,
+.evidenceCard span {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.overviewCard strong {
+  color: #0f172a;
+  line-height: 1.5;
+  font-size: 0.96rem;
+}
+
+.evidenceCard p {
+  margin: 0;
+  color: #0f172a;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.sectionTitle {
+  margin: 1.35rem 0 0.9rem;
+}
+
+.walletPanel {
+  margin-bottom: 1rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.walletHint,
+.walletError {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+.walletHint {
+  color: #475569;
+}
+
+.walletError {
+  margin-top: 0.7rem;
+  color: #b91c1c;
+}
+
+.walletActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.85rem;
+}
+
+.actionBar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.recordList {
+  padding: 1rem 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.recordCard {
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 1rem;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recordCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.7);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.18);
+}
+
+.recordCardActive {
+  border-color: rgba(59, 130, 246, 0.78);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.24);
+  background: #f8fbff;
+}
+
+.recordCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.recordCardHeader strong {
+  color: #0f172a;
+  line-height: 1.45;
+}
+
+.recordBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.recordMeta {
+  margin-top: 0.55rem;
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.recordPreview {
+  margin: 0.65rem 0 0;
+  color: #334155;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.emptyState {
+  padding: 1rem;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 18px;
+  color: #64748b;
+  text-align: center;
+  background: #ffffff;
+}
+
+@media (max-width: 1080px) {
+  .pageGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .mainPanel,
+  .sidePanel {
+    height: auto;
+    max-height: none;
+  }
+
+  .panelScroll,
+  .recordList {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkboxTopAlign {
+    justify-content: flex-start;
+  }
+}

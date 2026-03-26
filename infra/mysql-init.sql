@@ -240,6 +240,14 @@ CREATE TABLE IF NOT EXISTS `evidence_records` (
   `target_id` VARCHAR(36) NOT NULL,
   `summary` TEXT NULL,
   `status` ENUM('PENDING', 'RECORDED') NOT NULL DEFAULT 'PENDING',
+  `record_hash` VARCHAR(66) NULL,
+  `tx_hash` VARCHAR(66) NULL,
+  `block_number` BIGINT NULL,
+  `chain_id` BIGINT NULL,
+  `contract_address` VARCHAR(42) NULL,
+  `revision` INT NULL,
+  `recorded_at` DATETIME NULL,
+  `sync_error` TEXT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY `idx_evidence_target` (`target_type`, `target_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE utf8mb4_unicode_ci;

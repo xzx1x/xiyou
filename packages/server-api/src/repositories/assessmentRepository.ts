@@ -19,8 +19,7 @@ export type AssessmentResultRecord = {
 };
 
 /**
- * 保存测评结果记录。
- */
+ * 淇濆瓨娴嬭瘎缁撴灉璁板綍銆? */
 export async function createAssessmentResult(
   payload: AssessmentResultRecord,
 ): Promise<AssessmentResultRecord> {
@@ -39,9 +38,30 @@ export async function createAssessmentResult(
   return payload;
 }
 
+export async function findAssessmentResultById(
+  id: string,
+): Promise<AssessmentResultRecord | null> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT * FROM assessment_results WHERE id = ? LIMIT 1",
+    [id],
+  );
+  if (rows.length === 0) {
+    return null;
+  }
+  const row = rows[0]!;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    score: row.score,
+    level: row.level,
+    answers: row.answers,
+    createdAt: new Date(row.created_at),
+  };
+}
+
 /**
- * 查询用户历史测评结果。
- */
+ * 鏌ヨ鐢ㄦ埛鍘嗗彶娴嬭瘎缁撴灉銆? */
 export async function listAssessmentResults(
   userId: string,
 ): Promise<AssessmentResultRecord[]> {

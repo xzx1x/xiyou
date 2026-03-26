@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../../components/layouts/AppShell";
 import { CenterToast } from "../../../components/ui/CenterToast";
 import {
-  cancelAppointment,
   completeAppointment,
   createReport,
   getProfile,
@@ -145,27 +144,6 @@ export default function CounselorAppointmentsPage() {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "操作失败");
-    }
-  };
-
-  /**
-   * 心理师请假取消预约。
-   */
-  const handleCancel = async (appointmentId: string) => {
-    setMessage(null);
-    setError(null);
-    try {
-      const result = await cancelAppointment(appointmentId, "心理师请假取消");
-      setMessage(result);
-      setAppointments((prev) =>
-        prev.map((item) =>
-          item.id === appointmentId
-            ? { ...item, status: "CANCELLED_BY_COUNSELOR" }
-            : item,
-        ),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "取消失败");
     }
   };
 
@@ -429,9 +407,6 @@ export default function CounselorAppointmentsPage() {
                       <>
                         <button className="btn btn-secondary" onClick={() => handleComplete(appointment.id)}>
                           标记完成
-                        </button>
-                        <button className="btn btn-secondary" onClick={() => handleCancel(appointment.id)}>
-                          请假取消
                         </button>
                       </>
                     )}

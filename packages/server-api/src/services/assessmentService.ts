@@ -1,10 +1,22 @@
 import {
   createAssessmentResult,
+  findAssessmentResultById,
   listAssessmentResults,
   type AssessmentType,
 } from "../repositories/assessmentRepository";
-import { BadRequestError } from "../utils/errors";
-import { createEvidencePlaceholder } from "./evidenceService";
+import { BadRequestError, UnauthorizedError } from "../utils/errors";
+import {
+  encodeAssessmentChainKey,
+  getAssessmentEvidenceContractConfig,
+  getAssessmentTypeCode,
+  hashAssessmentRecord,
+  signAssessmentChainAuthorization,
+} from "./blockchainEvidenceService";
+import {
+  confirmAssessmentEvidence,
+  ensureEvidencePlaceholder,
+  syncAssessmentEvidence,
+} from "./evidenceService";
 
 type AssessmentQuestion = {
   id: number;
@@ -26,21 +38,21 @@ const MOOD_TEMPLATE: AssessmentTemplate = {
     { id: 1, text: "心情低落或提不起精神" },
     { id: 2, text: "对平时喜欢的事情缺乏兴趣" },
     { id: 3, text: "情绪容易突然变差" },
-    { id: 4, text: "感到内心空荡或无意义" },
+    { id: 4, text: "感到内心空荡或没有意义" },
     { id: 5, text: "对未来感到悲观" },
     { id: 6, text: "自责或对自己不满意" },
     { id: 7, text: "容易因为小事难过" },
     { id: 8, text: "感到动力不足" },
     { id: 9, text: "做事拖延或难以开始" },
     { id: 10, text: "觉得自己没有价值" },
-    { id: 11, text: "容易哭或情绪激动" },
-    { id: 12, text: "一天中大部分时间心情不佳" },
+    { id: 11, text: "容易哭泣或情绪激动" },
+    { id: 12, text: "一天中大部分时间心情不好" },
     { id: 13, text: "与人交往时情绪低落" },
     { id: 14, text: "觉得生活没有乐趣" },
-    { id: 15, text: "感到心里沉重" },
+    { id: 15, text: "感到心理沉重" },
     { id: 16, text: "情绪问题影响学习或工作" },
-    { id: 17, text: "注意力被情绪影响" },
-    { id: 18, text: "对积极的反馈也难以开心" },
+    { id: 17, text: "注意力受情绪影响" },
+    { id: 18, text: "对积极反馈也难以开心" },
     { id: 19, text: "情绪起伏影响睡眠" },
     { id: 20, text: "对他人表现冷淡或疏远" },
   ],
@@ -67,7 +79,7 @@ const ANXIETY_TEMPLATE: AssessmentTemplate = {
     { id: 14, text: "睡前总是胡思乱想" },
     { id: 15, text: "对日常任务也会焦虑" },
     { id: 16, text: "因为担心而拖延" },
-    { id: 17, text: "感到胃部不适或紧绷" },
+    { id: 17, text: "感到胃部不适或绷紧" },
     { id: 18, text: "难以专注当前事情" },
     { id: 19, text: "需要不断确认才安心" },
     { id: 20, text: "对身体小变化也很敏感" },
@@ -81,9 +93,9 @@ const STRESS_TEMPLATE: AssessmentTemplate = {
   questions: [
     { id: 1, text: "感到时间不够用" },
     { id: 2, text: "任务堆积让你喘不过气" },
-    { id: 3, text: "难以兼顾学习或工作与生活" },
+    { id: 3, text: "难以兼顾学习工作与生活" },
     { id: 4, text: "感到身体紧绷" },
-    { id: 5, text: "易因压力而发脾气" },
+    { id: 5, text: "容易因压力而发脾气" },
     { id: 6, text: "感到精力被透支" },
     { id: 7, text: "压力影响饮食" },
     { id: 8, text: "压力影响睡眠" },
@@ -108,18 +120,18 @@ const SLEEP_TEMPLATE: AssessmentTemplate = {
   description: "根据最近两周的感受选择频率，0=没有，3=几乎每天。",
   questions: [
     { id: 1, text: "入睡需要很长时间" },
-    { id: 2, text: "夜里容易醒" },
-    { id: 3, text: "凌晨醒来难再入睡" },
+    { id: 2, text: "夜里容易醒来" },
+    { id: 3, text: "凌晨醒来后难以再次入睡" },
     { id: 4, text: "做梦频繁影响睡眠" },
     { id: 5, text: "睡醒后仍感到疲惫" },
     { id: 6, text: "白天嗜睡" },
     { id: 7, text: "睡眠时间不足" },
-    { id: 8, text: "睡眠时间过长却不精神" },
+    { id: 8, text: "睡得很久却仍没精神" },
     { id: 9, text: "睡前使用手机影响入睡" },
     { id: 10, text: "睡前思绪过多" },
     { id: 11, text: "睡眠质量不稳定" },
-    { id: 12, text: "因压力影响睡眠" },
-    { id: 13, text: "噪音或光线影响睡眠" },
+    { id: 12, text: "因压力影响睡觉" },
+    { id: 13, text: "噪音或光线影响睡觉" },
     { id: 14, text: "睡眠影响学习或工作效率" },
     { id: 15, text: "睡眠不足影响情绪" },
     { id: 16, text: "需要午睡补觉" },
@@ -147,7 +159,7 @@ const SOCIAL_TEMPLATE: AssessmentTemplate = {
     { id: 10, text: "担心自己给别人添麻烦" },
     { id: 11, text: "在社交场合紧张" },
     { id: 12, text: "容易误解他人意思" },
-    { id: 13, text: "为逃避社交而长时间独处" },
+    { id: 13, text: "为了逃避社交而长时间独处" },
     { id: 14, text: "很难建立新的关系" },
     { id: 15, text: "害怕发生冲突" },
     { id: 16, text: "不敢寻求帮助" },
@@ -166,17 +178,11 @@ const ASSESSMENT_TEMPLATES: Record<AssessmentType, AssessmentTemplate> = {
   SOCIAL: SOCIAL_TEMPLATE,
 };
 
-/**
- * 获取测评模板列表。
- */
 export function getAssessmentTemplates() {
   return Object.values(ASSESSMENT_TEMPLATES);
 }
 
-/**
- * 提交测评并计算结果。
- */
-export async function submitAssessment(
+async function buildAssessmentRecord(
   userId: string,
   payload: {
     type: AssessmentType;
@@ -190,14 +196,17 @@ export async function submitAssessment(
   if (payload.answers.length !== template.questions.length) {
     throw new BadRequestError("测评答案数量不匹配");
   }
+
   const score = payload.answers.reduce((total, value) => {
     if (value < 0 || value > 3) {
       throw new BadRequestError("测评分值必须在 0-3 之间");
     }
     return total + value;
   }, 0);
+
   const level = getAssessmentLevel(score, template.questions.length * 3);
-  const record = await createAssessmentResult({
+
+  return createAssessmentResult({
     id: crypto.randomUUID(),
     userId,
     type: payload.type,
@@ -206,18 +215,137 @@ export async function submitAssessment(
     answers: JSON.stringify(payload.answers),
     createdAt: new Date(),
   });
-  // 保存测评结果的存证占位记录。
-  const evidence = await createEvidencePlaceholder({
-    targetType: "ASSESSMENT",
-    targetId: record.id,
-    summary: `${payload.type} 测评结果`,
-  });
+}
+
+export async function submitAssessment(
+  userId: string,
+  payload: {
+    type: AssessmentType;
+    answers: number[];
+  },
+) {
+  const record = await buildAssessmentRecord(userId, payload);
+  const evidence = await syncAssessmentEvidence(record);
+
   return { record, evidence };
 }
 
-/**
- * 查询用户的历史测评结果。
- */
+export async function prepareAssessmentSubmission(
+  userId: string,
+  payload: {
+    type: AssessmentType;
+    answers: number[];
+  },
+) {
+  const record = await buildAssessmentRecord(userId, payload);
+  const evidence = await ensureEvidencePlaceholder({
+    targetType: "ASSESSMENT",
+    targetId: record.id,
+    summary: "心理测评结果哈希存证",
+  });
+  const assessmentKey = encodeAssessmentChainKey(record.id);
+  const assessmentTypeCode = getAssessmentTypeCode(record.type);
+  const recordHash = hashAssessmentRecord(record);
+  const [contractConfig, authorizationSignature] = await Promise.all([
+    getAssessmentEvidenceContractConfig(),
+    signAssessmentChainAuthorization({
+      assessmentKey,
+      assessmentTypeCode,
+      recordHash,
+    }),
+  ]);
+
+  return {
+    record,
+    evidence,
+    chainSubmission: {
+      assessmentId: record.id,
+      assessmentKey,
+      assessmentTypeCode,
+      recordHash,
+      contractAddress: contractConfig?.contractAddress ?? null,
+      chainId: contractConfig?.chainId ?? null,
+      authorizationSignature,
+    },
+  };
+}
+
+export async function confirmAssessmentSubmission(
+  userId: string,
+  payload: {
+    assessmentId: string;
+    txHash: string;
+  },
+) {
+  const record = await findAssessmentResultById(payload.assessmentId);
+  if (!record) {
+    throw new BadRequestError("测评记录不存在");
+  }
+  if (record.userId !== userId) {
+    throw new UnauthorizedError("无权确认该测评的链上交易");
+  }
+
+  const evidence = await confirmAssessmentEvidence(record, payload.txHash);
+  return { record, evidence };
+}
+
+export async function prepareAssessmentEvidenceSubmission(
+  userId: string,
+  assessmentId: string,
+) {
+  const record = await findAssessmentResultById(assessmentId);
+  if (!record) {
+    throw new BadRequestError("娴嬭瘎璁板綍涓嶅瓨鍦?");
+  }
+  if (record.userId !== userId) {
+    throw new UnauthorizedError("鏃犳潈涓鸿娴嬭瘎鍙戣捣閾句笂鎻愪氦");
+  }
+
+  const evidence = await ensureEvidencePlaceholder({
+    targetType: "ASSESSMENT",
+    targetId: record.id,
+    summary: "蹇冪悊娴嬭瘎缁撴灉鍝堝笇瀛樿瘉",
+  });
+  const assessmentKey = encodeAssessmentChainKey(record.id);
+  const assessmentTypeCode = getAssessmentTypeCode(record.type);
+  const recordHash = hashAssessmentRecord(record);
+  const [contractConfig, authorizationSignature] = await Promise.all([
+    getAssessmentEvidenceContractConfig(),
+    signAssessmentChainAuthorization({
+      assessmentKey,
+      assessmentTypeCode,
+      recordHash,
+    }),
+  ]);
+
+  return {
+    record,
+    evidence,
+    chainSubmission: {
+      assessmentId: record.id,
+      assessmentKey,
+      assessmentTypeCode,
+      recordHash,
+      contractAddress: contractConfig?.contractAddress ?? null,
+      chainId: contractConfig?.chainId ?? null,
+      authorizationSignature,
+    },
+  };
+}
+
+export async function syncAssessmentSubmission(userId: string, assessmentId: string) {
+  const record = await findAssessmentResultById(assessmentId);
+  if (!record) {
+    throw new BadRequestError("娴嬭瘎璁板綍涓嶅瓨鍦?");
+  }
+  if (record.userId !== userId) {
+    throw new UnauthorizedError("鏃犳潈鍚屾璇ユ祴璇勭殑閾句笂瀛樿瘉");
+  }
+
+  const evidence = await syncAssessmentEvidence(record);
+  return { record, evidence };
+}
+
 export async function getAssessmentHistory(userId: string) {
   return listAssessmentResults(userId);
 }

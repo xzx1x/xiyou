@@ -21,7 +21,7 @@ appointmentRouter.get("/:id", authenticate, getAppointmentRecord);
 appointmentRouter.post(
   "/:id/cancel",
   authenticate,
-  authorizeRoles(["USER", "COUNSELOR", "ADMIN"]),
+  authorizeRoles(["USER"]),
   cancelAppointmentRecord,
 );
 appointmentRouter.patch(

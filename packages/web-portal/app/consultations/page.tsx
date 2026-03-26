@@ -62,15 +62,14 @@ export default function ConsultationsPage() {
         {records.length === 0 ? (
           <p className="muted">暂无咨询记录。</p>
         ) : (
-          <ul className="list">
+          <ul className="list list-button">
             {records.map((record) => (
               <li key={record.id}>
-                <div>
-                  <strong>记录时间：{new Date(record.createdAt).toLocaleString("zh-CN")}</strong>
-                  <div className="muted">问题分类：{record.issueCategory ?? "-"}</div>
-                </div>
-                <Link className="btn btn-secondary" href={`/consultations/${record.id}`}>
-                  查看详情
+                <Link className="consultation-list-card" href={`/consultations/${record.id}`}>
+                  <strong>{new Date(record.createdAt).toLocaleString("zh-CN")}</strong>
+                  <div className="muted">问题分类：{record.issueCategory ?? "未填写"}</div>
+                  <p className="consultation-list-preview">{record.summary ?? "暂无咨询摘要"}</p>
+                  <span className="consultation-list-link">查看详情</span>
                 </Link>
               </li>
             ))}

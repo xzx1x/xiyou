@@ -1,0 +1,19 @@
+{
+  "name": "chain-contracts",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:consultation": "hardhat run scripts/deploy-consultation-evidence.ts --network sepolia",
+    "deploy:assessment": "hardhat run scripts/deploy-assessment-evidence.ts --network sepolia",
+    "deploy:consultation:local": "hardhat run scripts/deploy-consultation-evidence.ts --network campusChain",
+    "deploy:assessment:local": "hardhat run scripts/deploy-assessment-evidence.ts --network campusChain"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^17.2.3",
+    "hardhat": "^2.22.17",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

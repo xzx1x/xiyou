@@ -84,12 +84,12 @@ export async function getAppointmentRecord(ctx: Context) {
 }
 
 /**
- * 取消预约（用户或心理师）。
+ * 用户取消预约。
  */
 export async function cancelAppointmentRecord(ctx: Context) {
-  // 当前登录用户与角色，用于执行取消逻辑。
-  const authUser = ctx.state.user as { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" } | undefined;
-  if (!authUser?.sub || !authUser.role) {
+  // 当前登录用户，用于执行取消逻辑。
+  const authUser = ctx.state.user as { sub?: string } | undefined;
+  if (!authUser?.sub) {
     ctx.throw(401, "未授权");
   }
   const parsed = appointmentCancelSchema.safeParse(ctx.request.body);
@@ -102,7 +102,7 @@ export async function cancelAppointmentRecord(ctx: Context) {
   if (!appointmentId) {
     throw new BadRequestError("预约编号不能为空");
   }
-  await cancelAppointment(appointmentId, { userId: authUser.sub, role: authUser.role }, parsed.data.reason ?? null);
+  await cancelAppointment(appointmentId, authUser.sub, parsed.data.reason ?? null);
   ctx.status = 200;
   ctx.body = { message: "预约已取消" };
 }

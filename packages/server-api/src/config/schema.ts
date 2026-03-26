@@ -16,6 +16,16 @@ const CHAT_MESSAGE_COLUMNS: Array<{ name: string; definition: string }> = [
   { name: "revoked_at", definition: "DATETIME NULL" },
   { name: "revoked_by", definition: "VARCHAR(36) NULL" },
 ];
+const EVIDENCE_COLUMNS: Array<{ name: string; definition: string }> = [
+  { name: "record_hash", definition: "VARCHAR(66) NULL" },
+  { name: "tx_hash", definition: "VARCHAR(66) NULL" },
+  { name: "block_number", definition: "BIGINT NULL" },
+  { name: "chain_id", definition: "BIGINT NULL" },
+  { name: "contract_address", definition: "VARCHAR(42) NULL" },
+  { name: "revision", definition: "INT NULL" },
+  { name: "recorded_at", definition: "DATETIME NULL" },
+  { name: "sync_error", definition: "TEXT NULL" },
+];
 
 // information_schema 查询的返回结构。
 type ColumnNameRow = RowDataPacket & { columnName: string };
@@ -44,6 +54,7 @@ export async function ensureDatabaseSchema(
   await createForumTables(connection, collation);
   await createReportTables(connection, collation);
   await createEvidenceTables(connection, collation);
+  await ensureEvidenceColumns(connection, databaseName);
   await createNotificationTables(connection, collation);
   await createEmailVerificationTables(connection, collation);
   await createPasswordResetTables(connection, collation);
@@ -414,6 +425,14 @@ async function createEvidenceTables(
       target_id VARCHAR(36) NOT NULL,
       summary TEXT NULL,
       status ENUM('PENDING', 'RECORDED') NOT NULL DEFAULT 'PENDING',
+      record_hash VARCHAR(66) NULL,
+      tx_hash VARCHAR(66) NULL,
+      block_number BIGINT NULL,
+      chain_id BIGINT NULL,
+      contract_address VARCHAR(42) NULL,
+      revision INT NULL,
+      recorded_at DATETIME NULL,
+      sync_error TEXT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       KEY idx_evidence_target (target_type, target_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
@@ -608,6 +627,26 @@ async function ensureChatMessageColumns(
     if (!existing.has(column.name)) {
       await connection.query(
         `ALTER TABLE chat_messages ADD COLUMN ${column.name} ${column.definition}`,
+      );
+    }
+  }
+}
+
+async function ensureEvidenceColumns(
+  connection: mysql.Connection,
+  databaseName: string,
+): Promise<void> {
+  const [rows] = await connection.query<ColumnNameRow[]>(
+    `SELECT COLUMN_NAME AS columnName
+     FROM information_schema.columns
+     WHERE table_schema = ? AND table_name = 'evidence_records'`,
+    [databaseName],
+  );
+  const existing = new Set(rows.map((row) => row.columnName));
+  for (const column of EVIDENCE_COLUMNS) {
+    if (!existing.has(column.name)) {
+      await connection.query(
+        `ALTER TABLE evidence_records ADD COLUMN ${column.name} ${column.definition}`,
       );
     }
   }

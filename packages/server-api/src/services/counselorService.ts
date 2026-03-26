@@ -2,6 +2,7 @@ import {
   createCounselorApplication,
   findCounselorApplicationById,
   findCounselorProfile,
+  findCounselorScheduleById,
   findLatestApplicationByUserId,
   listActiveCounselors,
   listCounselorApplications,
@@ -25,7 +26,7 @@ import {
   type UserRecord,
   type UserRole,
 } from "../repositories/userRepository";
-import { BadRequestError } from "../utils/errors";
+import { BadRequestError, UnauthorizedError } from "../utils/errors";
 import { createEvidencePlaceholder } from "./evidenceService";
 import { notifyInApp } from "./notificationService";
 
@@ -416,12 +417,26 @@ export async function getAvailableSchedules(counselorId: string) {
 }
 
 /**
- * 取消档期（心理师请假时使用）。
+ * 取消档期，仅允许心理师撤销自己的可预约档期。
  */
 export async function cancelSchedule(
   scheduleId: string,
+  counselorId: string,
   reason?: string | null,
 ) {
+  const schedule = await findCounselorScheduleById(scheduleId);
+  if (!schedule) {
+    throw new BadRequestError("档期不存在");
+  }
+  if (schedule.counselorId !== counselorId) {
+    throw new UnauthorizedError("无权取消该档期");
+  }
+  if (schedule.status !== "AVAILABLE") {
+    throw new BadRequestError("仅可取消未预约的可用档期");
+  }
+  if (schedule.startTime <= new Date()) {
+    throw new BadRequestError("档期已开始或过期，无法取消");
+  }
   await updateCounselorScheduleStatus(scheduleId, "CANCELLED", reason ?? null);
 }
 

@@ -322,7 +322,32 @@ export interface EvidenceRecord {
   targetId: string;
   summary?: string | null;
   status: "PENDING" | "RECORDED";
+  recordHash?: string | null;
+  txHash?: string | null;
+  blockNumber?: number | null;
+  chainId?: number | null;
+  contractAddress?: string | null;
+  revision?: number | null;
+  recordedAt?: string | null;
+  syncError?: string | null;
   createdAt: string;
+}
+
+export interface EvidenceVerification {
+  targetType: "CONSULTATION" | "ASSESSMENT";
+  isVerified: boolean | null;
+  localRecordHash?: string | null;
+  evidenceRecordHash?: string | null;
+  chainRecordHash?: string | null;
+  chainRevision?: number | null;
+  chainRecordedAt?: string | null;
+  chainOperator?: string | null;
+  reason?: string | null;
+}
+
+export interface EvidenceLookupResult {
+  evidence: EvidenceRecord | null;
+  verification: EvidenceVerification | null;
 }
 
 // 心理师统计数据结构。
@@ -431,6 +456,24 @@ interface ConsultationCreateResponse {
   evidence: EvidenceRecord;
 }
 
+interface ConsultationUpdateResponse {
+  record: ConsultationRecord;
+  evidence: EvidenceRecord;
+}
+
+interface ConsultationPrepareResponse {
+  record: ConsultationRecord;
+  evidence: EvidenceRecord;
+  chainSubmission: {
+    consultationId: string;
+    appointmentId: string;
+    recordHash: string;
+    contractAddress: string | null;
+    chainId: number | null;
+    authorizationSignature: string | null;
+  };
+}
+
 interface ConsultationListResponse {
   records: ConsultationRecord[];
 }
@@ -442,6 +485,20 @@ interface AssessmentTemplateResponse {
 interface AssessmentSubmitResponse {
   record: AssessmentResult;
   evidence: EvidenceRecord;
+}
+
+interface AssessmentPrepareResponse {
+  record: AssessmentResult;
+  evidence: EvidenceRecord;
+  chainSubmission: {
+    assessmentId: string;
+    assessmentKey: string;
+    assessmentTypeCode: number;
+    recordHash: string;
+    contractAddress: string | null;
+    chainId: number | null;
+    authorizationSignature: string | null;
+  };
 }
 
 interface AssessmentHistoryResponse {
@@ -525,6 +582,7 @@ interface NotificationListResponse {
 
 interface EvidenceDetailResponse {
   evidence: EvidenceRecord | null;
+  verification: EvidenceVerification | null;
 }
 
 interface AdminUsersResponse {
@@ -842,7 +900,7 @@ export async function listAvailableSchedules(counselorId: string): Promise<Couns
 }
 
 /**
- * 取消心理师档期。
+ * 取消心理师可预约档期。
  */
 export async function cancelCounselorSchedule(scheduleId: string, reason?: string): Promise<string> {
   const { message } = await request<{ message: string }>(`/api/counselors/schedules/${scheduleId}/cancel`, {
@@ -918,7 +976,7 @@ export async function getAppointmentDetail(appointmentId: string): Promise<Appoi
 }
 
 /**
- * 取消预约。
+ * 用户取消预约。
  */
 export async function cancelAppointment(appointmentId: string, reason?: string): Promise<string> {
   const { message } = await request<{ message: string }>(`/api/appointments/${appointmentId}/cancel`, {
@@ -978,13 +1036,50 @@ export async function createConsultation(payload: {
 export async function updateConsultation(
   recordId: string,
   payload: Partial<Omit<ConsultationRecord, "id" | "appointmentId" | "userId" | "counselorId" | "createdAt" | "updatedAt">>,
-): Promise<ConsultationRecord> {
-  const { record } = await request<{ record: ConsultationRecord }>(`/api/consultations/${recordId}`, {
+): Promise<ConsultationUpdateResponse> {
+  return request<ConsultationUpdateResponse>(`/api/consultations/${recordId}`, {
     method: "PATCH",
     auth: true,
     body: JSON.stringify(payload),
   });
-  return record;
+}
+
+export async function syncConsultationEvidence(
+  recordId: string,
+): Promise<ConsultationCreateResponse> {
+  return request<ConsultationCreateResponse>(
+    `/api/consultations/${recordId}/evidence/sync`,
+    {
+      method: "POST",
+      auth: true,
+    },
+  );
+}
+
+export async function prepareConsultationEvidence(
+  recordId: string,
+): Promise<ConsultationPrepareResponse> {
+  return request<ConsultationPrepareResponse>(
+    `/api/consultations/${recordId}/evidence/prepare`,
+    {
+      method: "POST",
+      auth: true,
+    },
+  );
+}
+
+export async function confirmConsultationEvidence(
+  recordId: string,
+  payload: { txHash: string },
+): Promise<ConsultationCreateResponse> {
+  return request<ConsultationCreateResponse>(
+    `/api/consultations/${recordId}/evidence/confirm`,
+    {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 /**
@@ -1034,9 +1129,49 @@ export async function submitAssessmentResult(payload: {
   });
 }
 
+export async function prepareAssessmentResult(payload: {
+  type: "MOOD" | "ANXIETY" | "STRESS" | "SLEEP" | "SOCIAL";
+  answers: number[];
+}): Promise<AssessmentPrepareResponse> {
+  return request<AssessmentPrepareResponse>("/api/assessments/prepare", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function confirmAssessmentResult(payload: {
+  assessmentId: string;
+  txHash: string;
+}): Promise<AssessmentSubmitResponse> {
+  return request<AssessmentSubmitResponse>("/api/assessments/confirm", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(payload),
+  });
+}
+
 /**
  * 获取测评历史。
  */
+export async function prepareAssessmentEvidence(
+  assessmentId: string,
+): Promise<AssessmentPrepareResponse> {
+  return request<AssessmentPrepareResponse>(`/api/assessments/${assessmentId}/evidence/prepare`, {
+    method: "POST",
+    auth: true,
+  });
+}
+
+export async function syncAssessmentEvidence(
+  assessmentId: string,
+): Promise<AssessmentSubmitResponse> {
+  return request<AssessmentSubmitResponse>(`/api/assessments/${assessmentId}/evidence/sync`, {
+    method: "POST",
+    auth: true,
+  });
+}
+
 export async function listAssessmentHistory(): Promise<AssessmentResult[]> {
   const { records } = await request<AssessmentHistoryResponse>("/api/assessments", {
     method: "GET",
@@ -1422,26 +1557,27 @@ export async function markAllNotificationsRead(): Promise<string> {
  */
 export async function getEvidenceByTarget(
   payload: { targetType: EvidenceRecord["targetType"]; targetId: string },
-): Promise<EvidenceRecord | null> {
-  const { evidence } = await request<EvidenceDetailResponse>(`/api/evidence?targetType=${payload.targetType}&targetId=${payload.targetId}`, {
+): Promise<EvidenceLookupResult> {
+  return request<EvidenceDetailResponse>(`/api/evidence?targetType=${payload.targetType}&targetId=${payload.targetId}`, {
     method: "GET",
     auth: true,
   });
-  return evidence;
 }
 
 /**
  * 根据存证编号查询记录。
  */
-export async function getEvidenceDetail(evidenceId: string): Promise<EvidenceRecord> {
-  const { evidence } = await request<EvidenceDetailResponse>(`/api/evidence/${evidenceId}`, {
+export async function getEvidenceDetail(
+  evidenceId: string,
+): Promise<EvidenceLookupResult> {
+  const result = await request<EvidenceDetailResponse>(`/api/evidence/${evidenceId}`, {
     method: "GET",
     auth: true,
   });
-  if (!evidence) {
+  if (!result.evidence) {
     throw new Error("存证记录不存在");
   }
-  return evidence;
+  return result;
 }
 
 type AdminAnnouncementResponse = {

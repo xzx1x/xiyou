@@ -1,0 +1,77 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\34605\\Desktop\\大文件夹\\西柚\\xiyou-main\\packages\\chain-contracts\\contracts\\ConsultationEvidenceRegistry.sol": {
+      "lastModificationDate": 1774449025960,
+      "contentHash": "7a4de9137e8e3654f97104e5e1e8c93e",
+      "sourceName": "contracts/ConsultationEvidenceRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ConsultationEvidenceRegistry"
+      ]
+    },
+    "C:\\Users\\34605\\Desktop\\大文件夹\\西柚\\xiyou-main\\packages\\chain-contracts\\contracts\\AssessmentEvidenceRegistry.sol": {
+      "lastModificationDate": 1774431216107,
+      "contentHash": "502b7a938269a39e10842881a4cc0637",
+      "sourceName": "contracts/AssessmentEvidenceRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "AssessmentEvidenceRegistry"
+      ]
+    }
+  }
+}

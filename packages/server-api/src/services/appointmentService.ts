@@ -163,11 +163,11 @@ export async function getAppointmentDetail(id: string) {
 }
 
 /**
- * 取消预约：用户取消将释放档期，心理师取消视为请假。
+ * 用户取消预约后释放档期，并通知心理师。
  */
 export async function cancelAppointment(
   appointmentId: string,
-  actor: { userId: string; role: "USER" | "COUNSELOR" | "ADMIN" },
+  userId: string,
   reason?: string | null,
 ) {
   const appointment = await findAppointmentById(appointmentId);
@@ -177,40 +177,22 @@ export async function cancelAppointment(
   if (appointment.status !== "BOOKED") {
     throw new BadRequestError("当前预约无法取消");
   }
-  if (actor.role === "USER" && appointment.userId !== actor.userId) {
+  if (appointment.userId !== userId) {
     throw new UnauthorizedError("无权取消该预约");
   }
-  if (actor.role === "COUNSELOR" && appointment.counselorId !== actor.userId) {
-    throw new UnauthorizedError("无权取消该预约");
-  }
-  const nextStatus: AppointmentStatus =
-    actor.role === "COUNSELOR" ? "CANCELLED_BY_COUNSELOR" : "CANCELLED_BY_USER";
+  const nextStatus: AppointmentStatus = "CANCELLED_BY_USER";
   await updateAppointmentStatus(appointmentId, nextStatus, reason ?? null);
-  if (actor.role === "USER") {
-    await updateCounselorScheduleStatus(
-      appointment.scheduleId,
-      "AVAILABLE",
-      null,
-    );
-    await notifyInApp(
-      appointment.counselorId,
-      "预约取消提醒",
-      "用户取消了预约，请查看档期安排。",
-      `/counselor/appointments/${appointmentId}`,
-    );
-  } else if (actor.role === "COUNSELOR") {
-    await updateCounselorScheduleStatus(
-      appointment.scheduleId,
-      "CANCELLED",
-      reason ?? null,
-    );
-    await notifyInApp(
-      appointment.userId,
-      "预约变更提醒",
-      "心理师临时请假导致预约取消，请重新选择档期。",
-      "/appointments",
-    );
-  }
+  await updateCounselorScheduleStatus(
+    appointment.scheduleId,
+    "AVAILABLE",
+    null,
+  );
+  await notifyInApp(
+    appointment.counselorId,
+    "预约取消提醒",
+    "用户取消了预约，请查看档期安排。",
+    `/counselor/appointments/${appointmentId}`,
+  );
 }
 
 /**

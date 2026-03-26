@@ -1,21 +1,21 @@
 import type { Context } from "koa";
 import {
+  consultationEvidenceConfirmSchema,
   consultationCreateSchema,
   consultationUpdateSchema,
 } from "../schemas/consultationSchema";
 import {
+  confirmRecordEvidence,
   createRecord,
   getRecord,
   listRecords,
+  prepareRecordEvidence,
+  syncRecordEvidence,
   updateRecord,
 } from "../services/consultationService";
 import { BadRequestError } from "../utils/errors";
 
-/**
- * 心理师创建咨询记录。
- */
 export async function createConsultationRecord(ctx: Context) {
-  // 当前登录心理师，用于创建记录归属。
   const authUser = ctx.state.user as { sub?: string } | undefined;
   if (!authUser?.sub) {
     ctx.throw(401, "未授权");
@@ -31,11 +31,7 @@ export async function createConsultationRecord(ctx: Context) {
   ctx.body = result;
 }
 
-/**
- * 心理师更新咨询记录内容。
- */
 export async function updateConsultationRecord(ctx: Context) {
-  // 当前登录心理师，用于权限校验。
   const authUser = ctx.state.user as { sub?: string } | undefined;
   if (!authUser?.sub) {
     ctx.throw(401, "未授权");
@@ -50,17 +46,15 @@ export async function updateConsultationRecord(ctx: Context) {
       issues: parsed.error.flatten(),
     });
   }
-  const record = await updateRecord(recordId, authUser.sub, parsed.data);
+  const result = await updateRecord(recordId, authUser.sub, parsed.data);
   ctx.status = 200;
-  ctx.body = { record };
+  ctx.body = result;
 }
 
-/**
- * 查询咨询记录列表（用户或心理师）。
- */
 export async function listConsultationRecords(ctx: Context) {
-  // 当前登录用户与角色，用于过滤记录列表。
-  const authUser = ctx.state.user as { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" } | undefined;
+  const authUser = ctx.state.user as
+    | { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" }
+    | undefined;
   if (!authUser?.sub || !authUser.role) {
     ctx.throw(401, "未授权");
   }
@@ -74,12 +68,10 @@ export async function listConsultationRecords(ctx: Context) {
   ctx.body = { records };
 }
 
-/**
- * 查看咨询记录详情。
- */
 export async function getConsultationRecord(ctx: Context) {
-  // 当前登录用户与角色，用于权限校验。
-  const authUser = ctx.state.user as { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" } | undefined;
+  const authUser = ctx.state.user as
+    | { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" }
+    | undefined;
   if (!authUser?.sub || !authUser.role) {
     ctx.throw(401, "未授权");
   }
@@ -90,4 +82,65 @@ export async function getConsultationRecord(ctx: Context) {
   const record = await getRecord(recordId, authUser.sub, authUser.role);
   ctx.status = 200;
   ctx.body = { record };
+}
+
+export async function syncConsultationEvidenceRecord(ctx: Context) {
+  const authUser = ctx.state.user as
+    | { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" }
+    | undefined;
+  if (!authUser?.sub || !authUser.role) {
+    ctx.throw(401, "未授权");
+  }
+  const recordId = ctx.params.id;
+  if (!recordId) {
+    throw new BadRequestError("记录编号不能为空");
+  }
+  const result = await syncRecordEvidence(recordId, authUser.sub, authUser.role);
+  ctx.status = 200;
+  ctx.body = result;
+}
+
+export async function prepareConsultationEvidenceRecord(ctx: Context) {
+  const authUser = ctx.state.user as
+    | { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" }
+    | undefined;
+  if (!authUser?.sub || !authUser.role) {
+    ctx.throw(401, "Unauthorized");
+  }
+  const recordId = ctx.params.id;
+  if (!recordId) {
+    throw new BadRequestError("Record id is required");
+  }
+  const result = await prepareRecordEvidence(recordId, authUser.sub, authUser.role);
+  ctx.status = 200;
+  ctx.body = result;
+}
+
+export async function confirmConsultationEvidenceRecord(ctx: Context) {
+  const authUser = ctx.state.user as
+    | { sub?: string; role?: "USER" | "COUNSELOR" | "ADMIN" }
+    | undefined;
+  if (!authUser?.sub || !authUser.role) {
+    ctx.throw(401, "Unauthorized");
+  }
+  const recordId = ctx.params.id;
+  if (!recordId) {
+    throw new BadRequestError("Record id is required");
+  }
+
+  const parsed = consultationEvidenceConfirmSchema.safeParse(ctx.request.body);
+  if (!parsed.success) {
+    throw new BadRequestError("Consultation evidence confirm payload is invalid", {
+      issues: parsed.error.flatten(),
+    });
+  }
+
+  const result = await confirmRecordEvidence(
+    recordId,
+    authUser.sub,
+    authUser.role,
+    parsed.data.txHash,
+  );
+  ctx.status = 200;
+  ctx.body = result;
 }

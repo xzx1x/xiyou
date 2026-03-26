@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode, useEffect } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getProfile, resolveAvatarUrl, type User, type UserRole } from "../../lib/api";
+import { MetaMaskWallet } from "../wallet/MetaMaskWallet";
 
-// 侧边导航项结构，统一渲染菜单。
 type NavItem = {
   label: string;
   href: string;
 };
 
-// 页面外壳组件的输入参数结构。
 type AppShellProps = {
   title: string;
   description?: string;
@@ -21,7 +20,6 @@ type AppShellProps = {
   panelAction?: ReactNode;
 };
 
-// 通用导航项，所有角色均可访问。
 const COMMON_NAV: NavItem[] = [
   { label: "首页", href: "/" },
   { label: "心理测评", href: "/assessments" },
@@ -30,7 +28,6 @@ const COMMON_NAV: NavItem[] = [
   { label: "个人主页", href: "/profile" },
 ];
 
-// 普通用户导航项，覆盖预约、咨询与反馈流程。
 const USER_NAV: NavItem[] = [
   { label: "心理咨询师", href: "/counselors" },
   { label: "预约管理", href: "/appointments" },
@@ -38,7 +35,6 @@ const USER_NAV: NavItem[] = [
   { label: "咨询反馈", href: "/feedback" },
 ];
 
-// 心理咨询师导航项，用于档期、预约与统计。
 const COUNSELOR_NAV: NavItem[] = [
   { label: "档期管理", href: "/counselor/schedules" },
   { label: "预约查看", href: "/counselor/appointments" },
@@ -47,10 +43,9 @@ const COUNSELOR_NAV: NavItem[] = [
   { label: "服务统计", href: "/counselor/stats" },
 ];
 
-// 管理员导航项，用于审核与数据治理。
 const ADMIN_NAV: NavItem[] = [
   { label: "账号管理", href: "/admin/users" },
-  { label: "心理师审批", href: "/admin/counselor-applications" },
+  { label: "心理师审核", href: "/admin/counselor-applications" },
   { label: "论坛审核", href: "/admin/forum-review" },
   { label: "发布公告", href: "/admin/announcements" },
   { label: "举报处理", href: "/admin/reports" },
@@ -58,15 +53,11 @@ const ADMIN_NAV: NavItem[] = [
   { label: "访问日志", href: "/admin/logs" },
 ];
 
-/**
- * 通用应用外壳，封装导航、权限提示与标题区域。
- */
 export function AppShell({
   title,
   description,
   children,
   requiredRoles,
-  // 是否使用默认面板布局包裹内容。
   withPanel = true,
   panelAction,
 }: AppShellProps) {
@@ -76,13 +67,19 @@ export function AppShell({
   const [error, setError] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
 
-  /**
-   * 加载当前登录用户，用于渲染权限菜单。
-   */
   useEffect(() => {
     async function loadProfile() {
       setLoading(true);
       setError(null);
+
+      const token = localStorage.getItem("campus_auth_token");
+      if (!token) {
+        setRedirecting(true);
+        setLoading(false);
+        router.replace("/login");
+        return;
+      }
+
       try {
         const data = await getProfile();
         setUser(data);
@@ -90,6 +87,10 @@ export function AppShell({
         const message = err instanceof Error ? err.message : "请先登录";
         if (
           message.includes("Token 无效或已过期") ||
+          message.includes("缺少访问令牌") ||
+          message.includes("未授权") ||
+          message.includes("Unauthorized") ||
+          message.includes("401") ||
           message.includes("请先登录") ||
           message.includes("需要登录")
         ) {
@@ -103,10 +104,10 @@ export function AppShell({
         setLoading(false);
       }
     }
-    loadProfile();
-  }, []);
 
-  // 根据用户角色拼接可见导航菜单。
+    loadProfile();
+  }, [router]);
+
   const navItems = useMemo(() => {
     if (!user) {
       return COMMON_NAV;
@@ -124,18 +125,17 @@ export function AppShell({
     () => resolveAvatarUrl(user?.avatarUrl) || "/default-avatar.svg",
     [user?.avatarUrl],
   );
-  const avatarAlt = user?.nickname ?? user?.email ?? "用户";
 
-  // 判断是否满足页面所需角色。
+  const avatarAlt = user?.nickname ?? user?.email ?? "用户";
   const roleDenied =
-    !!requiredRoles && !!user && !requiredRoles.includes(user.role);
+    Boolean(requiredRoles) && Boolean(user) && !requiredRoles!.includes(user!.role);
 
   if (loading || redirecting) {
     return (
       <div className="page-shell">
         <div className="card">
           <h1>正在加载</h1>
-          <p>正在读取账号信息，请稍候…</p>
+          <p>正在读取账号信息，请稍候。</p>
         </div>
       </div>
     );
@@ -181,11 +181,8 @@ export function AppShell({
               }
             }}
           />
-          <div>
-            <strong>校心连线</strong>
-            <p>心理咨询 · 站内存证 · 角色协作</p>
-          </div>
         </div>
+
         <nav className="dashboard-nav">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="nav-link">
@@ -193,12 +190,15 @@ export function AppShell({
             </Link>
           ))}
         </nav>
+
         <div className="header-actions">
+          <MetaMaskWallet />
           <Link href="/login" className="ghost-btn small">
             切换账号
           </Link>
         </div>
       </header>
+
       <main className="dashboard-main">
         {withPanel ? (
           <section className="panel">
@@ -207,10 +207,12 @@ export function AppShell({
                 <h2>{title}</h2>
                 <p>{description ?? `当前身份：${user?.role ?? "未知"}`}</p>
               </div>
-              {panelAction !== undefined ? (
-                panelAction
-              ) : (
-                <button className="ghost-btn small" type="button" onClick={() => router.back()}>
+              {panelAction ?? (
+                <button
+                  className="ghost-btn small"
+                  type="button"
+                  onClick={() => router.back()}
+                >
                   返回
                 </button>
               )}

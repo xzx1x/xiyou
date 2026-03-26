@@ -164,6 +164,10 @@ export async function listAvailableCounselorSchedules(ctx: Context) {
  * 心理师取消档期（请假）。
  */
 export async function cancelCounselorSchedule(ctx: Context) {
+  const authUser = ctx.state.user as { sub?: string } | undefined;
+  if (!authUser?.sub) {
+    ctx.throw(401, "未授权");
+  }
   const parsed = counselorScheduleCancelSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     throw new BadRequestError("取消信息不合法", {
@@ -174,7 +178,7 @@ export async function cancelCounselorSchedule(ctx: Context) {
   if (!scheduleId) {
     throw new BadRequestError("档期编号不能为空");
   }
-  await cancelSchedule(scheduleId, parsed.data.reason ?? null);
+  await cancelSchedule(scheduleId, authUser.sub, parsed.data.reason ?? null);
   ctx.status = 200;
   ctx.body = { message: "档期已取消" };
 }
