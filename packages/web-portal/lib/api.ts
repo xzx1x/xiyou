@@ -295,6 +295,75 @@ export interface ReportRecord {
   createdAt: string;
 }
 
+export interface ReportTargetUserSummary {
+  id: string;
+  email: string;
+  identityCode: string;
+  nickname?: string | null;
+  gender?: string | null;
+  major?: string | null;
+  grade?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+  isDisabled: boolean;
+  disabledReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ReportTargetDetail =
+  | {
+      type: "POST";
+      targetId: string;
+      found: boolean;
+      post: {
+        id: string;
+        title: string;
+        content: string;
+        status: "PENDING" | "APPROVED" | "REJECTED";
+        isAnonymous: boolean;
+        createdAt: string;
+        updatedAt: string;
+        author: ReportTargetUserSummary | null;
+      } | null;
+    }
+  | {
+      type: "COMMENT";
+      targetId: string;
+      found: boolean;
+      comment: {
+        id: string;
+        postId: string;
+        postTitle?: string | null;
+        parentId?: string | null;
+        content: string;
+        createdAt: string;
+        author: ReportTargetUserSummary | null;
+      } | null;
+    }
+  | {
+      type: "USER";
+      targetId: string;
+      found: boolean;
+      user: ReportTargetUserSummary | null;
+    }
+  | {
+      type: "COUNSELOR";
+      targetId: string;
+      found: boolean;
+      user: ReportTargetUserSummary | null;
+      counselor: {
+        userId: string;
+        bio?: string | null;
+        specialties?: string | null;
+        serviceMode: "ONLINE" | "OFFLINE" | "BOTH";
+        officeLocation?: string | null;
+        isActive: boolean;
+        createdAt: string;
+        updatedAt: string;
+      } | null;
+    };
+
 // 通知记录结构。
 export interface NotificationRecord {
   id: string;
@@ -574,6 +643,10 @@ interface ReportCreateResponse {
 
 interface ReportListResponse {
   reports: ReportRecord[];
+}
+
+interface ReportTargetDetailResponse {
+  target: ReportTargetDetail;
 }
 
 interface NotificationListResponse {
@@ -1502,6 +1575,22 @@ export async function listReports(status?: "PENDING" | "RESOLVED"): Promise<Repo
     auth: true,
   });
   return reports;
+}
+
+/**
+ * 管理员查看举报对象详情。
+ */
+export async function getReportTargetDetail(
+  reportId: string,
+): Promise<ReportTargetDetail> {
+  const { target } = await request<ReportTargetDetailResponse>(
+    `/api/reports/${reportId}/target`,
+    {
+      method: "GET",
+      auth: true,
+    },
+  );
+  return target;
 }
 
 /**

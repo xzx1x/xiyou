@@ -643,7 +643,7 @@ export default function CounselorsPage() {
             {activeCounselor ? (
               <>
                 <p className="muted">
-                  当前心理师：{activeCounselor.nickname ?? activeCounselor.email} · {activeCounselor.serviceMode}
+                  当前心理师：{activeCounselor.nickname ?? activeCounselor.email}
                 </p>
                 <label className="inline-field">
                   <span>预约备注</span>

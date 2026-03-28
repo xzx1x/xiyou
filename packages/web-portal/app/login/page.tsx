@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AuthForm } from "../../components/auth/AuthForm";
 
 /**
- * 登录页：提供入口说明 + 登录表单 + 白名单提示。
+ * 登录页：提供入口说明与登录表单。
  */
 export default function LoginPage() {
   return (
@@ -30,9 +30,6 @@ export default function LoginPage() {
           </p>
           <p className="hint">
             忘记密码？<Link href="/reset-password">找回密码</Link>
-          </p>
-          <p className="hint">
-            演示白名单：202202102 / 202202103 / 202202104 / 202202105（普通用户），123456（管理员）。
           </p>
         </section>
       </div>

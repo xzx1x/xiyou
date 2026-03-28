@@ -139,19 +139,6 @@ export default function CounselorRecordsPage() {
   const canUseWalletSubmission =
     wallet.available && wallet.connected && wallet.isCorrectChain;
 
-  const walletSubmissionHint = useMemo(() => {
-    if (!wallet.available) {
-      return "未检测到 MetaMask，重试上链将走服务端同步。";
-    }
-    if (!wallet.connected) {
-      return "MetaMask 未连接，重试上链将走服务端同步。";
-    }
-    if (!wallet.isCorrectChain) {
-      return `MetaMask 已连接，但当前不在 ${TARGET_CHAIN.chainName}，重试将回退到服务端同步。`;
-    }
-    return `当前会优先使用 MetaMask 在 ${TARGET_CHAIN.chainName} 发起咨询记录补录上链。`;
-  }, [wallet.available, wallet.connected, wallet.isCorrectChain]);
-
   const refreshEvidence = async (recordId: string) => {
     try {
       const result = await getEvidenceByTarget({
@@ -724,7 +711,6 @@ export default function CounselorRecordsPage() {
               </div>
 
               <div className={styles.walletPanel}>
-                <p className={styles.walletHint}>{walletSubmissionHint}</p>
                 <div className={styles.walletActions}>
                   {wallet.available && !wallet.connected && (
                     <button

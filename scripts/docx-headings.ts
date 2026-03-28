@@ -1,5 +1,31 @@
 import { resolve } from "path";
 
+function readDocumentXml(inputPath: string) {
+  try {
+    const unzipResult = Bun.spawnSync(["unzip", "-p", inputPath, "word/document.xml"]);
+    if (unzipResult.exitCode === 0) {
+      return unzipResult.stdout;
+    }
+
+    if (process.platform !== "win32") {
+      console.error("无法读取 docx 文档:", unzipResult.stderr.toString());
+      process.exit(1);
+    }
+  } catch (error) {
+    if (process.platform !== "win32") {
+      console.error("无法读取 docx 文档:", String(error));
+      process.exit(1);
+    }
+  }
+
+  const tarResult = Bun.spawnSync(["tar", "-xOf", inputPath, "word/document.xml"]);
+  if (tarResult.exitCode !== 0) {
+    console.error("无法读取 docx 文档:", tarResult.stderr.toString());
+    process.exit(1);
+  }
+  return tarResult.stdout;
+}
+
 function decodeXmlEntities(input: string) {
   return input
     .replace(/&lt;/g, "<")
@@ -33,14 +59,9 @@ function main() {
     process.exit(1);
   }
   const resolvedInput = resolve(inputPath);
-  const result = Bun.spawnSync(["unzip", "-p", resolvedInput, "word/document.xml"]);
-  if (result.exitCode !== 0) {
-    console.error("无法读取 docx 文档:", result.stderr.toString());
-    process.exit(1);
-  }
-  const xml = new TextDecoder().decode(result.stdout);
+  const xml = new TextDecoder().decode(readDocumentXml(resolvedInput));
   const paragraphs = extractParagraphs(xml);
-  const headingRegex = /^(摘\s*要|Abstract|目\s*录|致谢|\d+(\.\d+)*\s+.+)$/;
+  const headingRegex = /^(摘要|Abstract|目\s*录|致谢|\d+(\.\d+)*\s+.+)$/;
   paragraphs.forEach((text, index) => {
     const trimmed = text.trim();
     if (!trimmed) {

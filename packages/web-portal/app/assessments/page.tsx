@@ -163,19 +163,6 @@ export default function AssessmentsPage() {
   const canUseWalletSubmission =
     wallet.available && wallet.connected && wallet.isCorrectChain;
 
-  const walletSubmissionHint = useMemo(() => {
-    if (!wallet.available) {
-      return "未检测到 MetaMask，当前提交将走服务端同步上链。";
-    }
-    if (!wallet.connected) {
-      return "MetaMask 未连接，当前提交将走服务端同步上链。";
-    }
-    if (!wallet.isCorrectChain) {
-      return `MetaMask 已连接，但当前不在 ${TARGET_CHAIN.chainName}，提交会回退到服务端同步。`;
-    }
-    return "";
-  }, [wallet.available, wallet.connected, wallet.isCorrectChain]);
-
   const refreshEvidence = async (recordId: string) => {
     try {
       const result = await getEvidenceByTarget({
@@ -477,9 +464,6 @@ export default function AssessmentsPage() {
         <div className="card-block">
           {activeTemplate ? (
             <div className="form-stack">
-              <p className="muted assessment-hint">
-                {walletSubmissionHint}
-              </p>
               {wallet.available && !wallet.connected && (
                 <div className="button-row">
                   <button

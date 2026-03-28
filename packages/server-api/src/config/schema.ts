@@ -16,6 +16,9 @@ const CHAT_MESSAGE_COLUMNS: Array<{ name: string; definition: string }> = [
   { name: "revoked_at", definition: "DATETIME NULL" },
   { name: "revoked_by", definition: "VARCHAR(36) NULL" },
 ];
+const FORUM_COMMENT_COLUMNS: Array<{ name: string; definition: string }> = [
+  { name: "parent_id", definition: "VARCHAR(36) NULL" },
+];
 const EVIDENCE_COLUMNS: Array<{ name: string; definition: string }> = [
   { name: "record_hash", definition: "VARCHAR(66) NULL" },
   { name: "tx_hash", definition: "VARCHAR(66) NULL" },
@@ -52,6 +55,8 @@ export async function ensureDatabaseSchema(
   await ensureChatMessageColumns(connection, databaseName);
   await createFriendTables(connection, collation);
   await createForumTables(connection, collation);
+  await ensureForumCommentColumns(connection, databaseName);
+  await ensureForumCommentIndexes(connection, databaseName);
   await createReportTables(connection, collation);
   await createEvidenceTables(connection, collation);
   await ensureEvidenceColumns(connection, databaseName);
@@ -369,9 +374,11 @@ async function createForumTables(
       id VARCHAR(36) NOT NULL PRIMARY KEY,
       post_id VARCHAR(36) NOT NULL,
       author_id VARCHAR(36) NULL,
+      parent_id VARCHAR(36) NULL,
       content TEXT NOT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      KEY idx_forum_comment_post (post_id)
+      KEY idx_forum_comment_post (post_id),
+      KEY idx_forum_comment_parent (parent_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE ${collation}
   `);
 
@@ -649,5 +656,45 @@ async function ensureEvidenceColumns(
         `ALTER TABLE evidence_records ADD COLUMN ${column.name} ${column.definition}`,
       );
     }
+  }
+}
+
+async function ensureForumCommentColumns(
+  connection: mysql.Connection,
+  databaseName: string,
+): Promise<void> {
+  const [rows] = await connection.query<ColumnNameRow[]>(
+    `SELECT COLUMN_NAME AS columnName
+     FROM information_schema.columns
+     WHERE table_schema = ? AND table_name = 'forum_comments'`,
+    [databaseName],
+  );
+  const existing = new Set(rows.map((row) => row.columnName));
+  for (const column of FORUM_COMMENT_COLUMNS) {
+    if (!existing.has(column.name)) {
+      await connection.query(
+        `ALTER TABLE forum_comments ADD COLUMN ${column.name} ${column.definition}`,
+      );
+    }
+  }
+}
+
+async function ensureForumCommentIndexes(
+  connection: mysql.Connection,
+  databaseName: string,
+): Promise<void> {
+  const [indexes] = await connection.query<IndexNameRow[]>(
+    `SELECT INDEX_NAME AS indexName, NON_UNIQUE AS nonUnique
+     FROM information_schema.statistics
+     WHERE table_schema = ? AND table_name = 'forum_comments'`,
+    [databaseName],
+  );
+  const hasParentIndex = indexes.some(
+    (row) => row.indexName === "idx_forum_comment_parent",
+  );
+  if (!hasParentIndex) {
+    await connection.query(
+      "CREATE INDEX idx_forum_comment_parent ON forum_comments (parent_id)",
+    );
   }
 }

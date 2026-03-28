@@ -158,7 +158,7 @@ export function AuthForm({ mode }: Props) {
             <input
               name="identityCode"
               required
-              placeholder="普通用户示例：20250001；管理员示例：ADM-0001"
+              placeholder="请输入学号或工号"
               value={formData.identityCode}
               onChange={(event) => handleChange("identityCode", event.target.value)}
             />

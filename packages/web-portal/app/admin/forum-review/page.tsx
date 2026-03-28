@@ -3,7 +3,15 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
 import { CenterToast } from "../../../components/ui/CenterToast";
-import { listForumPosts, reviewForumPost, type ForumPost } from "../../../lib/api";
+import {
+  getForumPostDetail,
+  listForumPosts,
+  reviewForumPost,
+  type ForumPost,
+} from "../../../lib/api";
+
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString("zh-CN") : "-";
 
 /**
  * 管理员论坛审核页面。
@@ -13,6 +21,12 @@ export default function AdminForumReviewPage() {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   // 页面加载状态。
   const [loading, setLoading] = useState(true);
+  // 当前选中的帖子。
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  // 当前选中帖子的详情。
+  const [selectedPostDetail, setSelectedPostDetail] = useState<ForumPost | null>(null);
+  // 详情加载状态。
+  const [detailLoading, setDetailLoading] = useState(false);
   // 操作反馈提示。
   const [message, setMessage] = useState<string | null>(null);
   // 错误提示信息。
@@ -35,6 +49,12 @@ export default function AdminForumReviewPage() {
     try {
       const list = await listForumPosts("PENDING");
       setPosts(list);
+      setSelectedPostId((current) => {
+        if (current && list.some((post) => post.id === current)) {
+          return current;
+        }
+        return list[0]?.id ?? null;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载帖子失败");
     } finally {
@@ -45,6 +65,27 @@ export default function AdminForumReviewPage() {
   useEffect(() => {
     loadPosts();
   }, []);
+
+  useEffect(() => {
+    async function loadPostDetail() {
+      if (!selectedPostId) {
+        setSelectedPostDetail(null);
+        return;
+      }
+      setDetailLoading(true);
+      try {
+        const detail = await getForumPostDetail(selectedPostId);
+        setSelectedPostDetail(detail);
+      } catch (err) {
+        setSelectedPostDetail(null);
+        setError(err instanceof Error ? err.message : "加载帖子详情失败");
+      } finally {
+        setDetailLoading(false);
+      }
+    }
+
+    void loadPostDetail();
+  }, [selectedPostId]);
 
   useEffect(() => {
     if (!message) {
@@ -102,6 +143,9 @@ export default function AdminForumReviewPage() {
         status: "APPROVED",
       });
       setMessage(result);
+      if (selectedPostId === postId) {
+        setSelectedPostDetail(null);
+      }
       await loadPosts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "审核失败");
@@ -124,6 +168,9 @@ export default function AdminForumReviewPage() {
         reviewReason: rejectReason.trim() || undefined,
       });
       setMessage(result);
+      if (selectedPostId === activePost.id) {
+        setSelectedPostDetail(null);
+      }
       closeRejectModal();
       await loadPosts();
     } catch (err) {
@@ -153,35 +200,102 @@ export default function AdminForumReviewPage() {
           }}
         />
       )}
-      <div className="card-block">
-        <h3>待审核帖子</h3>
-        {posts.length === 0 ? (
-          <p className="muted">暂无待审核帖子。</p>
-        ) : (
-          <ul className="list">
-            {posts.map((post) => (
-              <li key={post.id}>
-                <div>
-                  <strong>{post.title}</strong>
-                  <div className="muted">
-                    作者：
-                    {post.isAnonymous
+      <div className="split-grid">
+        <div className="card-block">
+          <h3>待审核帖子</h3>
+          {posts.length === 0 ? (
+            <p className="muted">暂无待审核帖子。</p>
+          ) : (
+            <ul className="list list-button">
+              {posts.map((post) => (
+                <li key={post.id}>
+                  <button
+                    type="button"
+                    className={`list-item-button${selectedPostId === post.id ? " active" : ""}`}
+                    onClick={() => setSelectedPostId(post.id)}
+                  >
+                    <strong>{post.title}</strong>
+                    <div className="muted">
+                      作者：
+                      {post.isAnonymous
+                        ? "匿名用户"
+                        : post.author?.nickname ?? post.authorId ?? "未知"}
+                    </div>
+                    <div className="muted">发布时间：{formatDateTime(post.createdAt)}</div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="card-block">
+          <h3>帖子详情</h3>
+          {!selectedPostId ? (
+            <p className="muted">请先选择一条帖子。</p>
+          ) : detailLoading ? (
+            <p className="muted">详情加载中...</p>
+          ) : !selectedPostDetail ? (
+            <p className="muted">未能加载该帖子详情。</p>
+          ) : (
+            <div className="form-stack">
+              <div className="report-target">
+                <span>帖子标题</span>
+                <strong>{selectedPostDetail.title}</strong>
+              </div>
+              <div className="consultation-inline-grid">
+                <div className="consultation-meta-item">
+                  <span>作者</span>
+                  <strong>
+                    {selectedPostDetail.isAnonymous
                       ? "匿名用户"
-                      : post.author?.nickname ?? post.authorId ?? "未知"}
-                  </div>
+                      : selectedPostDetail.author?.nickname ??
+                        selectedPostDetail.authorId ??
+                        "未知"}
+                  </strong>
                 </div>
-                <div className="button-row">
-                  <button className="btn btn-secondary" onClick={() => handleApprove(post.id)}>
-                    通过
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => openRejectModal(post)}>
-                    拒绝
-                  </button>
+                <div className="consultation-meta-item">
+                  <span>状态</span>
+                  <strong>{selectedPostDetail.status}</strong>
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                <div className="consultation-meta-item">
+                  <span>发布时间</span>
+                  <strong>{formatDateTime(selectedPostDetail.createdAt)}</strong>
+                </div>
+                <div className="consultation-meta-item">
+                  <span>更新时间</span>
+                  <strong>{formatDateTime(selectedPostDetail.updatedAt)}</strong>
+                </div>
+              </div>
+              <div className="consultation-text-block">
+                <span className="consultation-label">正文内容</span>
+                <p>{selectedPostDetail.content || "暂无正文"}</p>
+              </div>
+              {selectedPostDetail.reviewReason && (
+                <div className="consultation-text-block">
+                  <span className="consultation-label">历史审核意见</span>
+                  <p>{selectedPostDetail.reviewReason}</p>
+                </div>
+              )}
+              <div className="button-row">
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => handleApprove(selectedPostDetail.id)}
+                >
+                  通过
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => openRejectModal(selectedPostDetail)}
+                >
+                  拒绝
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       {rejectModalOpen && activePost && (
         <div
@@ -202,6 +316,10 @@ export default function AdminForumReviewPage() {
               <div className="report-target">
                 <span>帖子标题</span>
                 <strong>{activePost.title}</strong>
+              </div>
+              <div className="consultation-text-block">
+                <span className="consultation-label">帖子正文</span>
+                <p>{activePost.content || "暂无正文"}</p>
               </div>
               <label className="inline-field">
                 <span>拒绝原因</span>

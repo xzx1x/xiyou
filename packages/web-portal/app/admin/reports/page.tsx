@@ -1,9 +1,191 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { AppShell } from "../../../components/layouts/AppShell";
 import { CenterToast } from "../../../components/ui/CenterToast";
-import { listReports, resolveAvatarUrl, resolveReport, type ReportRecord } from "../../../lib/api";
+import {
+  getReportTargetDetail,
+  listReports,
+  resolveAvatarUrl,
+  resolveReport,
+  type ReportRecord,
+  type ReportTargetDetail,
+  type ReportTargetUserSummary,
+  type UserRole,
+} from "../../../lib/api";
+
+function formatReportTargetType(targetType: ReportRecord["targetType"]) {
+  switch (targetType) {
+    case "POST":
+      return "论坛帖子";
+    case "COMMENT":
+      return "论坛评论";
+    case "USER":
+      return "用户";
+    case "COUNSELOR":
+      return "心理师";
+    default:
+      return targetType;
+  }
+}
+
+function getResolveTargetActionHint(targetType: ReportRecord["targetType"]) {
+  switch (targetType) {
+    case "POST":
+      return "勾选后将下架帖子，普通用户不可再查看。";
+    case "COMMENT":
+      return "勾选后将删除评论内容，普通用户将看到已删除状态。";
+    case "USER":
+      return "勾选后将封禁该用户账号。";
+    case "COUNSELOR":
+      return "勾选后将封禁该心理师账号。";
+    default:
+      return null;
+  }
+}
+
+function formatRoleLabel(role: UserRole) {
+  switch (role) {
+    case "ADMIN":
+      return "管理员";
+    case "COUNSELOR":
+      return "心理师";
+    case "USER":
+      return "普通用户";
+    default:
+      return role;
+  }
+}
+
+function formatServiceMode(serviceMode: "ONLINE" | "OFFLINE" | "BOTH") {
+  switch (serviceMode) {
+    case "ONLINE":
+      return "线上";
+    case "OFFLINE":
+      return "线下";
+    case "BOTH":
+      return "线上 + 线下";
+    default:
+      return serviceMode;
+  }
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("zh-CN");
+}
+
+function formatUserName(user?: ReportTargetUserSummary | null) {
+  if (!user) {
+    return "未知";
+  }
+  return user.nickname?.trim() || user.email;
+}
+
+function renderDetailBlock(label: string, content: ReactNode) {
+  return (
+    <label className="inline-field">
+      <span>{label}</span>
+      <div className="muted">{content}</div>
+    </label>
+  );
+}
+
+function renderUserDetail(user: ReportTargetUserSummary) {
+  return (
+    <>
+      {renderDetailBlock("账号", user.email)}
+      {renderDetailBlock("昵称", user.nickname || "-")}
+      {renderDetailBlock("身份码", user.identityCode)}
+      {renderDetailBlock("角色", formatRoleLabel(user.role))}
+      {renderDetailBlock("性别", user.gender || "-")}
+      {renderDetailBlock("专业", user.major || "-")}
+      {renderDetailBlock("年级", user.grade || "-")}
+      {renderDetailBlock(
+        "状态",
+        user.isDisabled ? `已禁用${user.disabledReason ? `：${user.disabledReason}` : ""}` : "正常",
+      )}
+      {renderDetailBlock("注册时间", formatDateTime(user.createdAt))}
+      {user.avatarUrl &&
+        renderDetailBlock(
+          "头像",
+          <img
+            src={resolveAvatarUrl(user.avatarUrl)}
+            alt={`${formatUserName(user)}头像`}
+            style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 12 }}
+          />,
+        )}
+    </>
+  );
+}
+
+function renderTargetDetail(detail: ReportTargetDetail | null) {
+  if (!detail) {
+    return null;
+  }
+  if (!detail.found) {
+    return <p className="muted">举报对象已不存在，或已无法读取详细信息。</p>;
+  }
+  if (detail.type === "POST" && detail.post) {
+    return (
+      <div className="form-stack">
+        {renderDetailBlock("对象类型", "论坛帖子")}
+        {renderDetailBlock("标题", detail.post.title)}
+        {renderDetailBlock("作者", formatUserName(detail.post.author))}
+        {renderDetailBlock("状态", detail.post.status)}
+        {renderDetailBlock("发布时间", formatDateTime(detail.post.createdAt))}
+        {renderDetailBlock(
+          "内容",
+          <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{detail.post.content}</div>,
+        )}
+      </div>
+    );
+  }
+  if (detail.type === "COMMENT" && detail.comment) {
+    return (
+      <div className="form-stack">
+        {renderDetailBlock("对象类型", "论坛评论")}
+        {renderDetailBlock("所属帖子", detail.comment.postTitle || detail.comment.postId)}
+        {renderDetailBlock("评论作者", formatUserName(detail.comment.author))}
+        {renderDetailBlock(
+          "评论层级",
+          detail.comment.parentId ? `回复评论 ${detail.comment.parentId}` : "一级评论",
+        )}
+        {renderDetailBlock("发布时间", formatDateTime(detail.comment.createdAt))}
+        {renderDetailBlock(
+          "内容",
+          <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{detail.comment.content}</div>,
+        )}
+      </div>
+    );
+  }
+  if (detail.type === "USER" && detail.user) {
+    return <div className="form-stack">{renderUserDetail(detail.user)}</div>;
+  }
+  if (detail.type === "COUNSELOR") {
+    return (
+      <div className="form-stack">
+        {detail.user && renderUserDetail(detail.user)}
+        {detail.counselor && (
+          <>
+            {renderDetailBlock("服务方式", formatServiceMode(detail.counselor.serviceMode))}
+            {renderDetailBlock("擅长方向", detail.counselor.specialties || "-")}
+            {renderDetailBlock("简介", detail.counselor.bio || "-")}
+            {renderDetailBlock("办公地点", detail.counselor.officeLocation || "-")}
+            {renderDetailBlock("接单状态", detail.counselor.isActive ? "启用" : "停用")}
+          </>
+        )}
+      </div>
+    );
+  }
+  return <p className="muted">暂不支持显示该举报对象的详细信息。</p>;
+}
 
 /**
  * 管理员举报处理页面。
@@ -24,6 +206,11 @@ export default function AdminReportsPage() {
   const [resolveDisableTarget, setResolveDisableTarget] = useState(false);
   const [resolveSubmitting, setResolveSubmitting] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailReport, setDetailReport] = useState<ReportRecord | null>(null);
+  const [targetDetail, setTargetDetail] = useState<ReportTargetDetail | null>(null);
 
   /**
    * 加载举报列表。
@@ -85,9 +272,39 @@ export default function AdminReportsPage() {
     setResolveError(null);
   };
 
+  const openDetailModal = async (report: ReportRecord) => {
+    setDetailModalOpen(true);
+    setDetailReport(report);
+    setTargetDetail(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    try {
+      const detail = await getReportTargetDetail(report.id);
+      setTargetDetail(detail);
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : "加载对象详情失败");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetailModal = () => {
+    setDetailModalOpen(false);
+    setDetailLoading(false);
+    setDetailError(null);
+    setDetailReport(null);
+    setTargetDetail(null);
+  };
+
   const handleResolveModalOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) {
       closeResolveModal();
+    }
+  };
+
+  const handleDetailModalOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      closeDetailModal();
     }
   };
 
@@ -98,8 +315,6 @@ export default function AdminReportsPage() {
     if (!activeReport) {
       return;
     }
-    const canDisableTarget =
-      activeReport.targetType === "USER" || activeReport.targetType === "COUNSELOR";
     setMessage(null);
     setError(null);
     setResolveError(null);
@@ -107,7 +322,7 @@ export default function AdminReportsPage() {
     try {
       const result = await resolveReport(activeReport.id, {
         actionTaken: resolveActionTaken.trim() || undefined,
-        disableTarget: canDisableTarget ? resolveDisableTarget : false,
+        disableTarget: resolveDisableTarget,
       });
       setMessage(result);
       closeResolveModal();
@@ -149,8 +364,15 @@ export default function AdminReportsPage() {
             {reports.map((report) => (
               <li key={report.id}>
                 <div>
-                  <strong>举报对象：{report.targetType}</strong>
+                  <button
+                    className="ghost-btn small"
+                    type="button"
+                    onClick={() => void openDetailModal(report)}
+                  >
+                    查看对象：{formatReportTargetType(report.targetType)}
+                  </button>
                   <div className="muted">原因：{report.reason}</div>
+                  <div className="muted">对象编号：{report.targetId}</div>
                   {report.attachmentUrl && (
                     <div className="report-attachment">
                       <a
@@ -193,7 +415,14 @@ export default function AdminReportsPage() {
             <div className="form-stack">
               <div className="report-target">
                 <span>举报对象</span>
-                <strong>{activeReport.targetType}</strong>
+                <strong>{formatReportTargetType(activeReport.targetType)}</strong>
+                <button
+                  className="ghost-btn small"
+                  type="button"
+                  onClick={() => void openDetailModal(activeReport)}
+                >
+                  查看对象详情
+                </button>
               </div>
               <label className="inline-field">
                 <span>处理意见</span>
@@ -208,14 +437,11 @@ export default function AdminReportsPage() {
                 <input
                   type="checkbox"
                   checked={resolveDisableTarget}
-                  disabled={
-                    activeReport.targetType !== "USER" && activeReport.targetType !== "COUNSELOR"
-                  }
                   onChange={(event) => setResolveDisableTarget(event.target.checked)}
                 />
               </label>
-              {activeReport.targetType !== "USER" && activeReport.targetType !== "COUNSELOR" && (
-                <span className="muted">仅支持封禁用户或心理师。</span>
+              {getResolveTargetActionHint(activeReport.targetType) && (
+                <span className="muted">{getResolveTargetActionHint(activeReport.targetType)}</span>
               )}
               <div className="button-row">
                 <button
@@ -228,6 +454,43 @@ export default function AdminReportsPage() {
                 </button>
                 <button className="btn btn-secondary" type="button" onClick={closeResolveModal}>
                   取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {detailModalOpen && detailReport && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="detail-modal-title"
+          onClick={handleDetailModalOverlayClick}
+        >
+          <div className="modal-card">
+            <div className="modal-header">
+              <h3 id="detail-modal-title">举报对象详情</h3>
+              <button className="btn btn-secondary" type="button" onClick={closeDetailModal}>
+                关闭
+              </button>
+            </div>
+            <div className="form-stack">
+              <div className="report-target">
+                <span>举报对象</span>
+                <strong>{formatReportTargetType(detailReport.targetType)}</strong>
+                <span className="muted">对象编号：{detailReport.targetId}</span>
+              </div>
+              {detailLoading ? (
+                <p className="muted">正在加载对象详情...</p>
+              ) : detailError ? (
+                <p className="muted">{detailError}</p>
+              ) : (
+                renderTargetDetail(targetDetail)
+              )}
+              <div className="button-row">
+                <button className="btn btn-secondary" type="button" onClick={closeDetailModal}>
+                  关闭
                 </button>
               </div>
             </div>

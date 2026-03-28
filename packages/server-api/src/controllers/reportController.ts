@@ -1,6 +1,7 @@
 import type { Context } from "koa";
 import { reportCreateSchema, reportResolveSchema } from "../schemas/reportSchema";
 import {
+  getReportTargetDetail,
   getReports,
   resolveReportAction,
   submitReport,
@@ -41,6 +42,19 @@ export async function listReportRecords(ctx: Context) {
   const reports = await getReports(status as "PENDING" | "RESOLVED" | undefined);
   ctx.status = 200;
   ctx.body = { reports };
+}
+
+/**
+ * 管理员查看举报对象详情。
+ */
+export async function getReportTargetDetailRecord(ctx: Context) {
+  const reportId = ctx.params.id;
+  if (!reportId) {
+    throw new BadRequestError("举报编号不能为空");
+  }
+  const target = await getReportTargetDetail(reportId);
+  ctx.status = 200;
+  ctx.body = { target };
 }
 
 /**

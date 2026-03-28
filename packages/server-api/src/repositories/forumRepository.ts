@@ -69,6 +69,21 @@ export async function updateForumPostStatus(
 }
 
 /**
+ * 举报处理后将帖子下架，普通用户不可再查看。
+ */
+export async function rejectForumPostByReport(
+  id: string,
+  reviewedBy: string,
+  reviewReason?: string | null,
+): Promise<void> {
+  const now = new Date();
+  await pool.execute<ResultSetHeader>(
+    "UPDATE forum_posts SET status = 'REJECTED', review_reason = ?, reviewed_by = ?, reviewed_at = ?, updated_at = ? WHERE id = ?",
+    [reviewReason ?? null, reviewedBy, now, now, id],
+  );
+}
+
+/**
  * 查询帖子详情。
  */
 export async function findForumPostById(
@@ -133,6 +148,18 @@ export async function findForumCommentById(
     return null;
   }
   return mapForumComment(rows[0]!);
+}
+
+/**
+ * 举报处理后删除评论内容，并清空作者信息。
+ */
+export async function redactForumCommentByReport(
+  id: string,
+): Promise<void> {
+  await pool.execute<ResultSetHeader>(
+    "UPDATE forum_comments SET content = ?, author_id = NULL WHERE id = ?",
+    ["该评论因举报处理已删除", id],
+  );
 }
 
 /**

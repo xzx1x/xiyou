@@ -3,6 +3,7 @@ import { authenticate } from "../middlewares/authenticate";
 import { authorizeRoles } from "../middlewares/authorize";
 import {
   createReportRecord,
+  getReportTargetDetailRecord,
   listReportRecords,
   resolveReportRecord,
 } from "../controllers/reportController";
@@ -14,6 +15,12 @@ const reportRouter = new Router({ prefix: "/api/reports" });
 
 reportRouter.post("/", authenticate, createReportRecord);
 reportRouter.get("/", authenticate, authorizeRoles(["ADMIN"]), listReportRecords);
+reportRouter.get(
+  "/:id/target",
+  authenticate,
+  authorizeRoles(["ADMIN"]),
+  getReportTargetDetailRecord,
+);
 reportRouter.post(
   "/:id/resolve",
   authenticate,
