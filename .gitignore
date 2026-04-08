@@ -5,4 +5,7 @@ node_modules/
 **/.env
 **/.env.local
 packages/server-api/uploads/
+.env
+.env.local
+.env.*.local
 ~$*
